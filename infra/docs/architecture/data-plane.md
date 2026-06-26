@@ -1,23 +1,36 @@
-# Order-Triage AgentCore — Detailed Runtime Architecture
+# Detailed Runtime Data Plane
 
 The **live request / data plane**: how one `InvokeAgentRuntime` call flows from an
 Entra-authenticated caller, through the AgentCore Runtime and the Cedar-guarded
 Gateway, out to the stub Lambdas, and into Snowflake **as the calling human** (OBO).
 The grey **Observability** band is the *control plane* (telemetry, not request flow);
-build/publish/deploy (GitHub Actions, OIDC, ECR/S3 artifacts) are intentionally
-omitted — see the README for that pipeline.
+build/publish/deploy is documented in the [repo README](../../../README.md) and
+[`playbooks/cd-setup.md`](../playbooks/cd-setup.md) (a DevOps / CI-CD plane is pending). This is the
+detailed sibling of the [system overview](system-overview.md) — same whole-system scope,
+but it expands the identity / Cedar / OBO / RLS chain the overview folds.
 
-**Edge legend** — **thick** arrows are the primary request/data path; **thin** arrows
-are supporting reads/writes (incl. telemetry into CloudWatch); **dashed** arrows are
-identity / token / secret flows. **Colour** — blue = identity, green = compute,
-red = authorization (incl. the Guardrail), amber = data store, cyan = external
-Snowflake, grey = observability (control plane).
+**Legend** — official AWS (+ SaaS) icons, left → right. Edges: **solid dark** =
+request / data path (numbered `1…6`) · **blue dashed** = identity / token / OBO ·
+**grey** = supporting (reads, telemetry). Rounded boxes group by trust / responsibility.
+The diagram is generated from [`specs.json`](specs.json) by the
+[`architecture-skill` skill](README.md) — edit the spec, not the SVG.
+
+![Detailed data plane — AWS architecture](data-plane-architecture.svg)
 
 > **See also — subsystem deep-dives.** This page is the end-to-end *data plane*. For
 > per-concern detail (each a different cross-section of the same call, in the same visual
-> grammar), see [`architecture/`](architecture/README.md): [Agent](architecture/agent-architecture.md) ·
-> [Security](architecture/security-architecture.md) · [Memory](architecture/memory-architecture.md) ·
-> [Observability](architecture/observability-architecture.md) · [Evaluation](architecture/evaluation-architecture.md).
+> grammar), see the [plane index](README.md): [Agent](agent-architecture.md) ·
+> [Knowledge](knowledge-architecture.md) · [Security](security-architecture.md) ·
+> [Memory](memory-architecture.md) · [Observability](observability-architecture.md) ·
+> [Evaluation](evaluation-architecture.md).
+
+## Wire-level view (Mermaid)
+
+The same flow as a detailed Mermaid diagram — finer-grained than the AWS-icon SVG above
+(every Entra app, credential provider and auth path spelled out), and useful where an
+AWS-icon render is overkill (PR diffs, ADRs). **Colour** — blue = identity, green =
+compute, red = authorization (incl. the Guardrail), amber = data store, cyan = external
+Snowflake, grey = observability (control plane).
 
 ```mermaid
 flowchart LR
