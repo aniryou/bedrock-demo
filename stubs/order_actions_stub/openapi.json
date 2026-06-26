@@ -1,0 +1,58 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Order Actions API",
+    "version": "1.0.0",
+    "description": "Records order flags for human review. AgentCore Gateway target."
+  },
+  "servers": [
+    { "url": "https://REPLACE_WITH_LAMBDA_FUNCTION_URL", "description": "Lambda Function URL (set by bedrock-demo-infra)" }
+  ],
+  "paths": {
+    "/orders/{order_id}/flag": {
+      "post": {
+        "operationId": "flagOrder",
+        "summary": "Flag an OPEN order for human review",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Order id, e.g. O-1003"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "reason": { "type": "string" } },
+                "required": ["reason"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Flag result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "flagged": { "type": "boolean" },
+                    "order_id": { "type": "string" },
+                    "status": { "type": "string" },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+# A skill bound to a RELATIONSHIP rather than a single entity. Because it applies
+# to the salesOrderAllocatedFromStock link, bindings.py expands it to both
+# endpoints (SalesOrder, StockPosition), so the skill also surfaces when either
+# of those entities is in context.
+apiName: allocate_stock_to_order
+displayName: "Allocate stock to a sales order"
+version: 1
+description: >
+  Procedure for allocating available stock to a sales order, respecting the
+  regional rule that unrestricted stock must exist before a delivery order is
+  created (US).
+appliesTo:
+  linkTypes: [salesOrderAllocatedFromStock]
+  actions:   [allocateStockToOrder]
+invokes:     [allocateStockToOrder]
+reads:
+  objectTypes: [SalesOrder, StockPosition, DeliveryOrder]
+  datasources: [sap, sap_stock]

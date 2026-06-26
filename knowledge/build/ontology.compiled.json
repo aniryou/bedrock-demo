@@ -1,0 +1,2478 @@
+{
+  "schemaVersion": "1.2.0",
+  "ontologyVersion": "0.5.0",
+  "title": "Agro-Commodity Supply Chain Ontology",
+  "domain": "agro-commodities",
+  "owner": "scm-ontology@example.com",
+  "status": "draft",
+  "lastModified": "2026-06-17",
+  "notes": "Entities and relationships across three work-streams \u2014 A (bean sourcing & procurement), B (planning, blend & inventory), C (sales, contracting & fulfilment) \u2014 derived from the supply-chain design diagram. The datasource registry doubles as a system-of-record maturity view. Skills (skills/) and the KB registry (kb/) bind into the ontology by apiName and are resolved by build/bindings.py into build/bindings.json (the reverse index). A first set of MVP credit / order-triage actions is defined; the broader A/B/C action catalog still comes from the work-stream specs. Property\u2192column mappings are pending where sources are informal.\n",
+  "connections": [
+    {
+      "apiName": "sap_prod",
+      "kind": "sap"
+    },
+    {
+      "apiName": "pluto_prod",
+      "kind": "pluto"
+    }
+  ],
+  "datasources": [
+    {
+      "apiName": "pluto",
+      "kind": "pluto_object",
+      "connection": "pluto_prod",
+      "note": "Contract master; mirrored to SAP"
+    },
+    {
+      "apiName": "sap",
+      "kind": "sap_object",
+      "connection": "sap_prod",
+      "note": "Transactional system of record (orders, deliveries, process orders)"
+    },
+    {
+      "apiName": "sap_stock",
+      "kind": "sap_object",
+      "connection": "sap_prod",
+      "note": "Stock from SAP; 3P warehouses via EDI; US 3P manual (no EDI)"
+    },
+    {
+      "apiName": "master_data",
+      "kind": "master_data",
+      "note": "Product / SKU master data"
+    },
+    {
+      "apiName": "sop_excel",
+      "kind": "spreadsheet",
+      "note": "S&OP production planning workbook (current state)"
+    },
+    {
+      "apiName": "recipe_generator_brs",
+      "kind": "saas_app",
+      "note": "Recipe generator (BRS); Infinity presets"
+    },
+    {
+      "apiName": "manual_yield",
+      "kind": "manual",
+      "note": "Yield not in SAP; manual capture today"
+    },
+    {
+      "apiName": "derived_weekly",
+      "kind": "derived",
+      "note": "Computed weekly from stock + contracts"
+    },
+    {
+      "apiName": "customer_email",
+      "kind": "email",
+      "note": "Inbound POs by customer email today; regional mailboxes planned"
+    },
+    {
+      "apiName": "project44",
+      "kind": "saas_app",
+      "note": "Project 44 shipment tracking"
+    },
+    {
+      "apiName": "infinity_order_portal",
+      "kind": "saas_app",
+      "note": "Infinity order-management portal"
+    },
+    {
+      "apiName": "notification_channels",
+      "kind": "saas_app",
+      "note": "Marketplace + regional mailboxes"
+    },
+    {
+      "apiName": "offer_intake",
+      "kind": "email",
+      "note": "Offers via email / WhatsApp / broker today"
+    },
+    {
+      "apiName": "trading_desk",
+      "kind": "manual",
+      "note": "Trading desk; basis not yet systematised"
+    },
+    {
+      "apiName": "research_docs",
+      "kind": "document_store",
+      "note": "Research team outputs (PowerPoint + email today)"
+    },
+    {
+      "apiName": "dpm_brs_connector",
+      "kind": "connector",
+      "note": "Demand-plan \u2192 recipe (DPM \u2192 BRS) connector"
+    },
+    {
+      "apiName": "origin_channels",
+      "kind": "saas_app",
+      "note": "Origin execution channels: portal / email / Excel"
+    },
+    {
+      "apiName": "decision_ledger",
+      "kind": "messaging",
+      "note": "Decision Ledger; email + WhatsApp today"
+    }
+  ],
+  "objectTypes": [
+    {
+      "apiName": "CustomerGroup",
+      "displayName": "Customer group",
+      "workstream": "C",
+      "group": "Order intake & commercial",
+      "primaryKey": "groupId",
+      "properties": [
+        {
+          "apiName": "groupId",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "Customer",
+      "displayName": "Customer",
+      "workstream": "C",
+      "group": "Order intake & commercial",
+      "primaryKey": "customerId",
+      "aliases": [
+        "account",
+        "buyer",
+        "client"
+      ],
+      "properties": [
+        {
+          "apiName": "customerId",
+          "type": "string"
+        },
+        {
+          "apiName": "region",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "CustomerProfile",
+      "displayName": "Customer profile",
+      "workstream": "C",
+      "group": "Order intake & commercial",
+      "primaryKey": "customerId",
+      "properties": [
+        {
+          "apiName": "customerId",
+          "type": "string"
+        },
+        {
+          "apiName": "tier",
+          "type": "string",
+          "enum": [
+            "strategic",
+            "large"
+          ]
+        },
+        {
+          "apiName": "allocationPriorityInputs",
+          "type": "string"
+        },
+        {
+          "apiName": "costToServe",
+          "type": "double"
+        }
+      ]
+    },
+    {
+      "apiName": "CreditProfile",
+      "displayName": "Credit profile",
+      "workstream": "C",
+      "group": "Order intake & commercial",
+      "primaryKey": "customerId",
+      "classification": "confidential",
+      "aliases": [
+        "credit limit",
+        "credit exposure",
+        "payment terms",
+        "AR risk"
+      ],
+      "properties": [
+        {
+          "apiName": "customerId",
+          "type": "string"
+        },
+        {
+          "apiName": "limit",
+          "type": "double"
+        },
+        {
+          "apiName": "terms",
+          "type": "string"
+        },
+        {
+          "apiName": "exposure",
+          "type": "double"
+        },
+        {
+          "apiName": "latePaymentHistory",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "ShipTo",
+      "displayName": "Customer plant (ship-to)",
+      "workstream": "C",
+      "group": "Order intake & commercial",
+      "primaryKey": "shipToId",
+      "properties": [
+        {
+          "apiName": "shipToId",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "Contract",
+      "displayName": "Contract",
+      "workstream": "C",
+      "group": "Order intake & commercial",
+      "primaryKey": "contractId",
+      "backing": {
+        "datasource": "pluto"
+      },
+      "properties": [
+        {
+          "apiName": "contractId",
+          "type": "string"
+        },
+        {
+          "apiName": "contractType",
+          "type": "string",
+          "enum": [
+            "forward",
+            "spot"
+          ]
+        },
+        {
+          "apiName": "level",
+          "type": "string",
+          "enum": [
+            "customer",
+            "customer_group"
+          ]
+        },
+        {
+          "apiName": "tenderedVolume",
+          "type": "double"
+        },
+        {
+          "apiName": "validity",
+          "type": "string"
+        },
+        {
+          "apiName": "price",
+          "type": "double"
+        },
+        {
+          "apiName": "incoterms",
+          "type": "string"
+        },
+        {
+          "apiName": "draggingFlag",
+          "type": "boolean"
+        },
+        {
+          "apiName": "syncStatus",
+          "type": "string",
+          "description": "SAP <-> Pluto sync status"
+        }
+      ]
+    },
+    {
+      "apiName": "CallOff",
+      "displayName": "Call-off",
+      "workstream": "C",
+      "group": "Order intake & commercial",
+      "primaryKey": [
+        "contractId",
+        "period"
+      ],
+      "properties": [
+        {
+          "apiName": "contractId",
+          "type": "string"
+        },
+        {
+          "apiName": "period",
+          "type": "string"
+        },
+        {
+          "apiName": "requestedVolume",
+          "type": "double"
+        },
+        {
+          "apiName": "dateReceived",
+          "type": "date"
+        }
+      ]
+    },
+    {
+      "apiName": "PurchaseOrder",
+      "displayName": "Purchase order (inbound)",
+      "workstream": "C",
+      "group": "Order intake & commercial",
+      "primaryKey": [
+        "customerId",
+        "customerPoNumber"
+      ],
+      "backing": {
+        "datasource": "customer_email"
+      },
+      "properties": [
+        {
+          "apiName": "customerId",
+          "type": "string"
+        },
+        {
+          "apiName": "customerPoNumber",
+          "type": "string"
+        },
+        {
+          "apiName": "requestedShipTos",
+          "type": "array",
+          "description": "may span several ship-tos"
+        },
+        {
+          "apiName": "requestedQty",
+          "type": "double"
+        },
+        {
+          "apiName": "requestedPrice",
+          "type": "double"
+        },
+        {
+          "apiName": "requestedIncoterms",
+          "type": "string"
+        },
+        {
+          "apiName": "packagingInstructions",
+          "type": "string"
+        },
+        {
+          "apiName": "matchStatus",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "SalesOrder",
+      "displayName": "Sales order",
+      "workstream": "C",
+      "group": "Order intake & commercial",
+      "primaryKey": "soNumber",
+      "classification": "confidential",
+      "backing": {
+        "datasource": "sap"
+      },
+      "properties": [
+        {
+          "apiName": "soNumber",
+          "type": "string"
+        },
+        {
+          "apiName": "status",
+          "type": "string"
+        },
+        {
+          "apiName": "dynamicReference",
+          "type": "string",
+          "description": "pre-SAP marketplace reference"
+        },
+        {
+          "apiName": "creationMode",
+          "type": "string",
+          "enum": [
+            "touchless",
+            "manual"
+          ]
+        }
+      ]
+    },
+    {
+      "apiName": "DeliveryOrder",
+      "displayName": "Delivery order (OBD)",
+      "workstream": "C",
+      "group": "Order intake & commercial",
+      "primaryKey": "doNumber",
+      "backing": {
+        "datasource": "sap"
+      },
+      "properties": [
+        {
+          "apiName": "doNumber",
+          "type": "string"
+        },
+        {
+          "apiName": "creditStatus",
+          "type": "string"
+        },
+        {
+          "apiName": "creationTrigger",
+          "type": "string",
+          "description": "lead time + stock"
+        },
+        {
+          "apiName": "regionalRule",
+          "type": "string",
+          "description": "US: stock must exist"
+        }
+      ]
+    },
+    {
+      "apiName": "DemandPlan",
+      "displayName": "Demand plan",
+      "workstream": "B",
+      "group": "Demand & production planning",
+      "primaryKey": [
+        "region",
+        "horizonPeriod",
+        "version"
+      ],
+      "properties": [
+        {
+          "apiName": "region",
+          "type": "string"
+        },
+        {
+          "apiName": "horizonPeriod",
+          "type": "string"
+        },
+        {
+          "apiName": "version",
+          "type": "string"
+        },
+        {
+          "apiName": "unconstrainedForecast",
+          "type": "double"
+        },
+        {
+          "apiName": "netsOff",
+          "type": "string",
+          "description": "contracts | sales orders | FTS"
+        },
+        {
+          "apiName": "triangulationInputs",
+          "type": "string",
+          "description": "history | budget | market"
+        },
+        {
+          "apiName": "salesValidationStatus",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "ProductionPlan",
+      "displayName": "Production plan",
+      "workstream": "B",
+      "group": "Demand & production planning",
+      "primaryKey": [
+        "site",
+        "period"
+      ],
+      "backing": {
+        "datasource": "sop_excel"
+      },
+      "properties": [
+        {
+          "apiName": "site",
+          "type": "string"
+        },
+        {
+          "apiName": "period",
+          "type": "string",
+          "description": "weekly buckets, M+2"
+        },
+        {
+          "apiName": "frozenHorizon",
+          "type": "string",
+          "description": "1-2 weeks, plant-set"
+        },
+        {
+          "apiName": "prescribedSequence",
+          "type": "string"
+        },
+        {
+          "apiName": "powderButterBalance",
+          "type": "string"
+        },
+        {
+          "apiName": "priority",
+          "type": "string",
+          "description": "SOs > contracts > fast-movers"
+        }
+      ]
+    },
+    {
+      "apiName": "ProcessOrder",
+      "displayName": "Process order",
+      "workstream": "B",
+      "group": "Demand & production planning",
+      "primaryKey": "processOrderNo",
+      "backing": {
+        "datasource": "sap"
+      },
+      "properties": [
+        {
+          "apiName": "processOrderNo",
+          "type": "string"
+        },
+        {
+          "apiName": "quantities",
+          "type": "double"
+        },
+        {
+          "apiName": "status",
+          "type": "string"
+        },
+        {
+          "apiName": "creationMode",
+          "type": "string",
+          "description": "manual weekly today"
+        }
+      ]
+    },
+    {
+      "apiName": "ProductionLine",
+      "displayName": "Production line",
+      "workstream": "B",
+      "group": "Demand & production planning",
+      "primaryKey": [
+        "plant",
+        "lineId"
+      ],
+      "properties": [
+        {
+          "apiName": "plant",
+          "type": "string"
+        },
+        {
+          "apiName": "lineId",
+          "type": "string"
+        },
+        {
+          "apiName": "runCapacity",
+          "type": "string",
+          "description": "experience throughput per SKU"
+        },
+        {
+          "apiName": "downtime",
+          "type": "string",
+          "description": "PM plan + unplanned baseline %"
+        },
+        {
+          "apiName": "constraints",
+          "type": "array",
+          "description": "silo | bean ops | packaging"
+        }
+      ]
+    },
+    {
+      "apiName": "Recipe",
+      "displayName": "Recipe",
+      "workstream": "B",
+      "group": "Demand & production planning",
+      "primaryKey": [
+        "productSpec",
+        "blendId"
+      ],
+      "backing": {
+        "datasource": "recipe_generator_brs"
+      },
+      "properties": [
+        {
+          "apiName": "productSpec",
+          "type": "string"
+        },
+        {
+          "apiName": "blendId",
+          "type": "string"
+        },
+        {
+          "apiName": "presetComponents",
+          "type": "string",
+          "description": "pre-approved | min %"
+        },
+        {
+          "apiName": "fillerShare",
+          "type": "double"
+        },
+        {
+          "apiName": "qualityConstraints",
+          "type": "array",
+          "description": "cadmium | polyphenol | segregation"
+        },
+        {
+          "apiName": "rankingScore",
+          "type": "double",
+          "description": "virtual cost"
+        }
+      ]
+    },
+    {
+      "apiName": "BlendComponent",
+      "displayName": "Blend component",
+      "workstream": "B",
+      "group": "Demand & production planning",
+      "primaryKey": [
+        "blendId",
+        "component"
+      ],
+      "properties": [
+        {
+          "apiName": "blendId",
+          "type": "string"
+        },
+        {
+          "apiName": "component",
+          "type": "string"
+        },
+        {
+          "apiName": "source",
+          "type": "string",
+          "enum": [
+            "origin_bean",
+            "cake",
+            "rework",
+            "external"
+          ]
+        },
+        {
+          "apiName": "proportionMinPct",
+          "type": "double"
+        },
+        {
+          "apiName": "proportionMaxPct",
+          "type": "double"
+        },
+        {
+          "apiName": "qualityParameters",
+          "type": "array"
+        }
+      ]
+    },
+    {
+      "apiName": "YieldRecord",
+      "displayName": "Yield record",
+      "workstream": "B",
+      "group": "Demand & production planning",
+      "primaryKey": [
+        "recipe",
+        "plant",
+        "period"
+      ],
+      "backing": {
+        "datasource": "manual_yield"
+      },
+      "properties": [
+        {
+          "apiName": "recipe",
+          "type": "string"
+        },
+        {
+          "apiName": "plant",
+          "type": "string"
+        },
+        {
+          "apiName": "period",
+          "type": "string"
+        },
+        {
+          "apiName": "predictedYield",
+          "type": "double"
+        },
+        {
+          "apiName": "actualYield",
+          "type": "double"
+        },
+        {
+          "apiName": "varianceDrivers",
+          "type": "array",
+          "description": "FFA | moisture | fat | shell"
+        },
+        {
+          "apiName": "machineWearFactor",
+          "type": "double"
+        }
+      ]
+    },
+    {
+      "apiName": "Product",
+      "displayName": "Product (SKU)",
+      "workstream": "B",
+      "group": "Stock & quality",
+      "primaryKey": "sku",
+      "titleProperty": "sku",
+      "backing": {
+        "datasource": "master_data"
+      },
+      "properties": [
+        {
+          "apiName": "sku",
+          "type": "string"
+        },
+        {
+          "apiName": "family",
+          "type": "string"
+        },
+        {
+          "apiName": "form",
+          "type": "string"
+        },
+        {
+          "apiName": "customerSpecificFlag",
+          "type": "boolean"
+        },
+        {
+          "apiName": "velocityClass",
+          "type": "string",
+          "enum": [
+            "slow",
+            "fast"
+          ]
+        }
+      ]
+    },
+    {
+      "apiName": "StockPosition",
+      "displayName": "Stock position",
+      "workstream": "B",
+      "group": "Stock & quality",
+      "primaryKey": [
+        "sku",
+        "location",
+        "state"
+      ],
+      "backing": {
+        "datasource": "sap_stock"
+      },
+      "aliases": [
+        "inventory",
+        "on-hand stock",
+        "stock on hand"
+      ],
+      "properties": [
+        {
+          "apiName": "sku",
+          "type": "string"
+        },
+        {
+          "apiName": "location",
+          "type": "string"
+        },
+        {
+          "apiName": "state",
+          "type": "string",
+          "enum": [
+            "quality_hold",
+            "unrestricted",
+            "allocated",
+            "fts",
+            "rework",
+            "blocked"
+          ]
+        },
+        {
+          "apiName": "quantity",
+          "type": "double"
+        },
+        {
+          "apiName": "age",
+          "type": "integer"
+        },
+        {
+          "apiName": "value",
+          "type": "double"
+        },
+        {
+          "apiName": "locationState",
+          "type": "string",
+          "description": "in-transit (intercompany)"
+        }
+      ]
+    },
+    {
+      "apiName": "FtsOpportunity",
+      "displayName": "FTS opportunity",
+      "workstream": "B",
+      "group": "Stock & quality",
+      "primaryKey": [
+        "sku",
+        "location",
+        "week"
+      ],
+      "backing": {
+        "datasource": "derived_weekly"
+      },
+      "properties": [
+        {
+          "apiName": "sku",
+          "type": "string"
+        },
+        {
+          "apiName": "location",
+          "type": "string"
+        },
+        {
+          "apiName": "week",
+          "type": "string"
+        },
+        {
+          "apiName": "holdingCost",
+          "type": "double"
+        },
+        {
+          "apiName": "liquidationCost",
+          "type": "double"
+        },
+        {
+          "apiName": "recommendedAvenue",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "QualityClearance",
+      "displayName": "Quality clearance",
+      "workstream": "B",
+      "group": "Stock & quality",
+      "primaryKey": [
+        "batch",
+        "sku"
+      ],
+      "properties": [
+        {
+          "apiName": "batch",
+          "type": "string"
+        },
+        {
+          "apiName": "sku",
+          "type": "string"
+        },
+        {
+          "apiName": "stdLeadTimeDays",
+          "type": "integer",
+          "default": 7
+        },
+        {
+          "apiName": "customerSpecificTests",
+          "type": "array"
+        },
+        {
+          "apiName": "releaseStatus",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "Plant",
+      "displayName": "Plant",
+      "workstream": "B",
+      "group": "Stock & quality",
+      "primaryKey": "siteCode",
+      "properties": [
+        {
+          "apiName": "siteCode",
+          "type": "string"
+        },
+        {
+          "apiName": "region",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "Warehouse",
+      "displayName": "Warehouse",
+      "workstream": "B",
+      "group": "Stock & quality",
+      "primaryKey": "warehouseCode",
+      "properties": [
+        {
+          "apiName": "warehouseCode",
+          "type": "string"
+        },
+        {
+          "apiName": "thirdParty",
+          "type": "boolean"
+        },
+        {
+          "apiName": "ediConnected",
+          "type": "boolean",
+          "description": "US 3P: no"
+        }
+      ]
+    },
+    {
+      "apiName": "Shipment",
+      "displayName": "Shipment",
+      "workstream": "C",
+      "group": "Logistics & documents",
+      "primaryKey": "shipmentId",
+      "backing": {
+        "datasource": "project44"
+      },
+      "properties": [
+        {
+          "apiName": "shipmentId",
+          "type": "string"
+        },
+        {
+          "apiName": "mode",
+          "type": "string",
+          "enum": [
+            "ocean",
+            "road"
+          ]
+        },
+        {
+          "apiName": "eta",
+          "type": "timestamp"
+        },
+        {
+          "apiName": "predictedDeliveryWindow",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "DocumentDocket",
+      "displayName": "Document docket",
+      "workstream": "C",
+      "group": "Logistics & documents",
+      "primaryKey": [
+        "deliveryOrder",
+        "docketId"
+      ],
+      "properties": [
+        {
+          "apiName": "deliveryOrder",
+          "type": "string"
+        },
+        {
+          "apiName": "docketId",
+          "type": "string"
+        },
+        {
+          "apiName": "requiredDocumentSet",
+          "type": "array"
+        },
+        {
+          "apiName": "sentDate",
+          "type": "date"
+        },
+        {
+          "apiName": "completeByMaterialReceipt",
+          "type": "boolean"
+        }
+      ]
+    },
+    {
+      "apiName": "Invoice",
+      "displayName": "Invoice",
+      "workstream": "C",
+      "group": "Logistics & documents",
+      "primaryKey": "invoiceNumber",
+      "properties": [
+        {
+          "apiName": "invoiceNumber",
+          "type": "string"
+        },
+        {
+          "apiName": "amount",
+          "type": "double"
+        },
+        {
+          "apiName": "status",
+          "type": "string"
+        },
+        {
+          "apiName": "cycleTimeStamps",
+          "type": "string",
+          "description": "1 day ~ $2M working capital"
+        }
+      ]
+    },
+    {
+      "apiName": "Exception",
+      "displayName": "Exception",
+      "workstream": "C",
+      "group": "Commercial health & comms",
+      "primaryKey": "exceptionId",
+      "backing": {
+        "datasource": "infinity_order_portal"
+      },
+      "aliases": [
+        "order exception",
+        "mismatch",
+        "order hold"
+      ],
+      "properties": [
+        {
+          "apiName": "exceptionId",
+          "type": "string"
+        },
+        {
+          "apiName": "type",
+          "type": "string",
+          "enum": [
+            "price",
+            "qty",
+            "contract_fit",
+            "credit",
+            "other"
+          ]
+        },
+        {
+          "apiName": "routedToOwner",
+          "type": "string"
+        },
+        {
+          "apiName": "resolutionState",
+          "type": "string",
+          "description": "feeds learning loop"
+        }
+      ]
+    },
+    {
+      "apiName": "CustomerNotification",
+      "displayName": "Customer notification",
+      "workstream": "C",
+      "group": "Commercial health & comms",
+      "primaryKey": "notificationId",
+      "backing": {
+        "datasource": "notification_channels"
+      },
+      "properties": [
+        {
+          "apiName": "notificationId",
+          "type": "string"
+        },
+        {
+          "apiName": "type",
+          "type": "string",
+          "enum": [
+            "ack",
+            "confirm",
+            "delay",
+            "early_offer",
+            "dragging_reminder",
+            "docket"
+          ]
+        },
+        {
+          "apiName": "attemptCount",
+          "type": "integer"
+        },
+        {
+          "apiName": "response",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "Escalation",
+      "displayName": "Escalation",
+      "workstream": "C",
+      "group": "Commercial health & comms",
+      "primaryKey": "escalationId",
+      "properties": [
+        {
+          "apiName": "escalationId",
+          "type": "string"
+        },
+        {
+          "apiName": "escalationPath",
+          "type": "string",
+          "description": "internal then customer"
+        },
+        {
+          "apiName": "responsibleParty",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "Dispute",
+      "displayName": "Dispute / claim",
+      "workstream": "C",
+      "group": "Commercial health & comms",
+      "primaryKey": "disputeId",
+      "properties": [
+        {
+          "apiName": "disputeId",
+          "type": "string"
+        },
+        {
+          "apiName": "direction",
+          "type": "string",
+          "enum": [
+            "customer",
+            "carry_cost",
+            "supplier_quality"
+          ]
+        },
+        {
+          "apiName": "theme",
+          "type": "string"
+        },
+        {
+          "apiName": "resolutionCost",
+          "type": "double",
+          "description": "ours + theirs"
+        }
+      ]
+    },
+    {
+      "apiName": "Origin",
+      "displayName": "Origin",
+      "workstream": "A",
+      "group": "Bean sourcing & procurement",
+      "primaryKey": "originCode",
+      "properties": [
+        {
+          "apiName": "originCode",
+          "type": "string"
+        },
+        {
+          "apiName": "region",
+          "type": "string"
+        },
+        {
+          "apiName": "cropCalendar",
+          "type": "string"
+        },
+        {
+          "apiName": "executionChannel",
+          "type": "string",
+          "enum": [
+            "cdi_auction",
+            "cocobod",
+            "upcountry",
+            "grade_system",
+            "exporters"
+          ]
+        }
+      ]
+    },
+    {
+      "apiName": "Supplier",
+      "displayName": "Supplier",
+      "workstream": "A",
+      "group": "Bean sourcing & procurement",
+      "primaryKey": "supplierId",
+      "properties": [
+        {
+          "apiName": "supplierId",
+          "type": "string"
+        },
+        {
+          "apiName": "executionReliability",
+          "type": "string"
+        },
+        {
+          "apiName": "qualityConsistency",
+          "type": "string"
+        },
+        {
+          "apiName": "segregationDiscipline",
+          "type": "string"
+        },
+        {
+          "apiName": "defaultRisk",
+          "type": "string"
+        },
+        {
+          "apiName": "claimsHistory",
+          "type": "string",
+          "description": "last 12 months"
+        },
+        {
+          "apiName": "strategicValue",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "Offer",
+      "displayName": "Offer",
+      "workstream": "A",
+      "group": "Bean sourcing & procurement",
+      "primaryKey": "offerId",
+      "backing": {
+        "datasource": "offer_intake"
+      },
+      "properties": [
+        {
+          "apiName": "offerId",
+          "type": "string"
+        },
+        {
+          "apiName": "grade",
+          "type": "string"
+        },
+        {
+          "apiName": "volume",
+          "type": "double"
+        },
+        {
+          "apiName": "differential",
+          "type": "double"
+        },
+        {
+          "apiName": "deliveryBasis",
+          "type": "string",
+          "enum": [
+            "farmgate",
+            "fob",
+            "cif",
+            "sif"
+          ]
+        },
+        {
+          "apiName": "dealStructure",
+          "type": "string",
+          "enum": [
+            "outright",
+            "ptbf",
+            "pre_financed"
+          ]
+        },
+        {
+          "apiName": "validity",
+          "type": "string"
+        },
+        {
+          "apiName": "deliveredFactoryCost",
+          "type": "double",
+          "description": "normalised"
+        }
+      ]
+    },
+    {
+      "apiName": "BasisCurve",
+      "displayName": "Basis curve",
+      "workstream": "A",
+      "group": "Bean sourcing & procurement",
+      "primaryKey": [
+        "origin",
+        "cropYear",
+        "grade",
+        "deliveryMonth"
+      ],
+      "backing": {
+        "datasource": "trading_desk"
+      },
+      "properties": [
+        {
+          "apiName": "origin",
+          "type": "string"
+        },
+        {
+          "apiName": "cropYear",
+          "type": "string"
+        },
+        {
+          "apiName": "grade",
+          "type": "string"
+        },
+        {
+          "apiName": "deliveryMonth",
+          "type": "string"
+        },
+        {
+          "apiName": "differential",
+          "type": "double"
+        },
+        {
+          "apiName": "capacityToCommit",
+          "type": "double"
+        },
+        {
+          "apiName": "stance",
+          "type": "string",
+          "enum": [
+            "push",
+            "hold",
+            "pull",
+            "block"
+          ]
+        }
+      ]
+    },
+    {
+      "apiName": "CropSdView",
+      "displayName": "Crop & S&D view",
+      "workstream": "A",
+      "group": "Bean sourcing & procurement",
+      "primaryKey": [
+        "origin",
+        "cropPhase",
+        "version"
+      ],
+      "backing": {
+        "datasource": "research_docs"
+      },
+      "properties": [
+        {
+          "apiName": "origin",
+          "type": "string"
+        },
+        {
+          "apiName": "cropPhase",
+          "type": "string"
+        },
+        {
+          "apiName": "version",
+          "type": "string"
+        },
+        {
+          "apiName": "supplyOutlook",
+          "type": "string",
+          "description": "with confidence bands"
+        },
+        {
+          "apiName": "stockToGrindSignal",
+          "type": "string"
+        },
+        {
+          "apiName": "shockScenarios",
+          "type": "array"
+        }
+      ]
+    },
+    {
+      "apiName": "DemandToBeanRequirement",
+      "displayName": "Demand-to-bean requirement",
+      "workstream": "A",
+      "group": "Bean sourcing & procurement",
+      "primaryKey": "requirementId",
+      "backing": {
+        "datasource": "dpm_brs_connector"
+      },
+      "properties": [
+        {
+          "apiName": "requirementId",
+          "type": "string"
+        },
+        {
+          "apiName": "volume",
+          "type": "double"
+        },
+        {
+          "apiName": "origin",
+          "type": "string"
+        },
+        {
+          "apiName": "cropYear",
+          "type": "string"
+        },
+        {
+          "apiName": "grade",
+          "type": "string"
+        },
+        {
+          "apiName": "qualityAttributes",
+          "type": "array"
+        },
+        {
+          "apiName": "timing",
+          "type": "string"
+        },
+        {
+          "apiName": "sustainabilityInheritance",
+          "type": "string",
+          "description": "via recipe"
+        }
+      ]
+    },
+    {
+      "apiName": "ProcurementPlan",
+      "displayName": "Procurement plan",
+      "workstream": "A",
+      "group": "Bean sourcing & procurement",
+      "primaryKey": [
+        "region",
+        "season",
+        "version"
+      ],
+      "properties": [
+        {
+          "apiName": "region",
+          "type": "string"
+        },
+        {
+          "apiName": "season",
+          "type": "string"
+        },
+        {
+          "apiName": "version",
+          "type": "string"
+        },
+        {
+          "apiName": "commitmentLadder",
+          "type": "string",
+          "description": "buckets x origins x triggers"
+        },
+        {
+          "apiName": "dealStructureChoices",
+          "type": "array"
+        },
+        {
+          "apiName": "expectedPbt",
+          "type": "double"
+        },
+        {
+          "apiName": "workingCapitalPath",
+          "type": "string"
+        },
+        {
+          "apiName": "coverPath",
+          "type": "string"
+        },
+        {
+          "apiName": "approvalState",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "CoverPolicy",
+      "displayName": "Cover policy",
+      "workstream": "A",
+      "group": "Bean sourcing & procurement",
+      "primaryKey": [
+        "factory",
+        "origin"
+      ],
+      "properties": [
+        {
+          "apiName": "factory",
+          "type": "string"
+        },
+        {
+          "apiName": "origin",
+          "type": "string"
+        },
+        {
+          "apiName": "physicalMonths",
+          "type": "double",
+          "description": "physical ~2 mo"
+        },
+        {
+          "apiName": "forwardsMonths",
+          "type": "string",
+          "description": "forwards 2-5 mo"
+        },
+        {
+          "apiName": "optimizationWindowMonths",
+          "type": "double",
+          "description": "9 mo window"
+        },
+        {
+          "apiName": "floorMonths",
+          "type": "double",
+          "description": "3 mo combined"
+        },
+        {
+          "apiName": "ceiling",
+          "type": "string",
+          "description": "working capital"
+        },
+        {
+          "apiName": "seasonalQualityAdjustments",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "BeanPurchaseContract",
+      "displayName": "Bean purchase contract",
+      "workstream": "A",
+      "group": "Bean sourcing & procurement",
+      "primaryKey": "purchaseContractId",
+      "backing": {
+        "datasource": "origin_channels"
+      },
+      "properties": [
+        {
+          "apiName": "purchaseContractId",
+          "type": "string"
+        },
+        {
+          "apiName": "origin",
+          "type": "string"
+        },
+        {
+          "apiName": "cropYear",
+          "type": "string"
+        },
+        {
+          "apiName": "grade",
+          "type": "string"
+        },
+        {
+          "apiName": "deliveryMonth",
+          "type": "string"
+        },
+        {
+          "apiName": "channel",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "apiName": "BeanLot",
+      "displayName": "Bean lot",
+      "workstream": "A",
+      "group": "Bean sourcing & procurement",
+      "primaryKey": [
+        "origin",
+        "cropYear",
+        "lotNo"
+      ],
+      "properties": [
+        {
+          "apiName": "origin",
+          "type": "string"
+        },
+        {
+          "apiName": "cropYear",
+          "type": "string"
+        },
+        {
+          "apiName": "lotNo",
+          "type": "string"
+        },
+        {
+          "apiName": "grade",
+          "type": "string"
+        },
+        {
+          "apiName": "qualityLayers",
+          "type": "array",
+          "description": "theoretical | arrival | landed | realized"
+        },
+        {
+          "apiName": "ffaDriftTrajectory",
+          "type": "string"
+        },
+        {
+          "apiName": "storageDrift",
+          "type": "string",
+          "description": "arrival -> usage; not captured today"
+        }
+      ]
+    },
+    {
+      "apiName": "OptimizerScenario",
+      "displayName": "Optimizer scenario",
+      "workstream": "A",
+      "group": "Bean sourcing & procurement",
+      "primaryKey": "scenarioId",
+      "properties": [
+        {
+          "apiName": "scenarioId",
+          "type": "string"
+        },
+        {
+          "apiName": "inputs",
+          "type": "string"
+        },
+        {
+          "apiName": "constraints",
+          "type": "string"
+        },
+        {
+          "apiName": "objective",
+          "type": "string"
+        },
+        {
+          "apiName": "output",
+          "type": "string",
+          "description": "commitment ladder"
+        },
+        {
+          "apiName": "reusable",
+          "type": "boolean"
+        }
+      ]
+    },
+    {
+      "apiName": "DecisionRecord",
+      "displayName": "Decision record",
+      "workstream": "A",
+      "group": "Bean sourcing & procurement",
+      "primaryKey": "decisionId",
+      "backing": {
+        "datasource": "decision_ledger"
+      },
+      "properties": [
+        {
+          "apiName": "decisionId",
+          "type": "string"
+        },
+        {
+          "apiName": "question",
+          "type": "string"
+        },
+        {
+          "apiName": "scenariosConsidered",
+          "type": "array"
+        },
+        {
+          "apiName": "chosenScenario",
+          "type": "string"
+        },
+        {
+          "apiName": "humanOwner",
+          "type": "string"
+        },
+        {
+          "apiName": "overrideReasonCode",
+          "type": "string"
+        },
+        {
+          "apiName": "outcome",
+          "type": "string",
+          "description": "filled over time"
+        },
+        {
+          "apiName": "versions",
+          "type": "string",
+          "description": "policy + agent + tool versions"
+        }
+      ]
+    }
+  ],
+  "linkTypes": [
+    {
+      "apiName": "groupContainsCustomers",
+      "displayName": "groups",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "CustomerGroup"
+      },
+      "to": {
+        "objectType": "Customer"
+      }
+    },
+    {
+      "apiName": "customerHasCredit",
+      "displayName": "has credit",
+      "kind": "association",
+      "cardinality": "one_to_one",
+      "from": {
+        "objectType": "Customer"
+      },
+      "to": {
+        "objectType": "CreditProfile"
+      }
+    },
+    {
+      "apiName": "customerHasProfile",
+      "displayName": "profiled by",
+      "kind": "association",
+      "cardinality": "one_to_one",
+      "from": {
+        "objectType": "Customer"
+      },
+      "to": {
+        "objectType": "CustomerProfile"
+      }
+    },
+    {
+      "apiName": "customerSignsContract",
+      "displayName": "signs",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "Customer"
+      },
+      "to": {
+        "objectType": "Contract"
+      }
+    },
+    {
+      "apiName": "groupSignsContract",
+      "displayName": "signs (group level)",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "CustomerGroup"
+      },
+      "to": {
+        "objectType": "Contract"
+      }
+    },
+    {
+      "apiName": "customerShipsTo",
+      "displayName": "ships to",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "Customer"
+      },
+      "to": {
+        "objectType": "ShipTo"
+      }
+    },
+    {
+      "apiName": "contractReleasedByCalloff",
+      "displayName": "released by",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "Contract"
+      },
+      "to": {
+        "objectType": "CallOff"
+      }
+    },
+    {
+      "apiName": "poEvidencesCalloff",
+      "displayName": "evidences",
+      "kind": "association",
+      "cardinality": "one_to_one",
+      "from": {
+        "objectType": "PurchaseOrder"
+      },
+      "to": {
+        "objectType": "CallOff"
+      }
+    },
+    {
+      "apiName": "poFansToSalesOrders",
+      "displayName": "fans out to (per ship-to)",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "PurchaseOrder"
+      },
+      "to": {
+        "objectType": "SalesOrder"
+      }
+    },
+    {
+      "apiName": "calloffCreatesSalesOrders",
+      "displayName": "creates",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "CallOff"
+      },
+      "to": {
+        "objectType": "SalesOrder"
+      }
+    },
+    {
+      "apiName": "salesOrderConvertsToDelivery",
+      "displayName": "converts to",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "SalesOrder"
+      },
+      "to": {
+        "objectType": "DeliveryOrder"
+      }
+    },
+    {
+      "apiName": "salesOrderAllocatedFromStock",
+      "displayName": "allocated from",
+      "kind": "association",
+      "cardinality": "many_to_many",
+      "from": {
+        "objectType": "SalesOrder"
+      },
+      "to": {
+        "objectType": "StockPosition"
+      }
+    },
+    {
+      "apiName": "salesOrderPrioritisedByProfile",
+      "displayName": "prioritised by",
+      "kind": "dependency",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "SalesOrder"
+      },
+      "to": {
+        "objectType": "CustomerProfile"
+      }
+    },
+    {
+      "apiName": "deliveryLoadedIntoShipment",
+      "displayName": "loaded into",
+      "kind": "association",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "DeliveryOrder"
+      },
+      "to": {
+        "objectType": "Shipment"
+      }
+    },
+    {
+      "apiName": "deliveryInvoicedBy",
+      "displayName": "invoiced by",
+      "kind": "association",
+      "cardinality": "one_to_one",
+      "from": {
+        "objectType": "DeliveryOrder"
+      },
+      "to": {
+        "objectType": "Invoice"
+      }
+    },
+    {
+      "apiName": "deliveryDocumentedBy",
+      "displayName": "documented by",
+      "kind": "association",
+      "cardinality": "one_to_one",
+      "from": {
+        "objectType": "DeliveryOrder"
+      },
+      "to": {
+        "objectType": "DocumentDocket"
+      }
+    },
+    {
+      "apiName": "shipmentCarriesStock",
+      "displayName": "carries in-transit",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "Shipment"
+      },
+      "to": {
+        "objectType": "StockPosition"
+      }
+    },
+    {
+      "apiName": "productStockedAs",
+      "displayName": "stocked as",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "Product"
+      },
+      "to": {
+        "objectType": "StockPosition"
+      }
+    },
+    {
+      "apiName": "productReworkedInto",
+      "displayName": "reworked into (slow -> fast)",
+      "kind": "association",
+      "cardinality": "many_to_many",
+      "from": {
+        "objectType": "Product"
+      },
+      "to": {
+        "objectType": "Product"
+      }
+    },
+    {
+      "apiName": "stockGatedByQuality",
+      "displayName": "gated by",
+      "kind": "association",
+      "cardinality": "one_to_one",
+      "from": {
+        "objectType": "StockPosition"
+      },
+      "to": {
+        "objectType": "QualityClearance"
+      }
+    },
+    {
+      "apiName": "stockHeldAtPlant",
+      "displayName": "held at",
+      "kind": "association",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "StockPosition"
+      },
+      "to": {
+        "objectType": "Plant"
+      }
+    },
+    {
+      "apiName": "stockHeldAtWarehouse",
+      "displayName": "held at",
+      "kind": "association",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "StockPosition"
+      },
+      "to": {
+        "objectType": "Warehouse"
+      }
+    },
+    {
+      "apiName": "stockSurfacesAsFts",
+      "displayName": "surfaces as (contract-less)",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "StockPosition"
+      },
+      "to": {
+        "objectType": "FtsOpportunity"
+      }
+    },
+    {
+      "apiName": "notificationSentToCustomer",
+      "displayName": "sent to",
+      "kind": "association",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "CustomerNotification"
+      },
+      "to": {
+        "objectType": "Customer"
+      }
+    },
+    {
+      "apiName": "notificationEscalatesTo",
+      "displayName": "escalates (unanswered x2)",
+      "kind": "association",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "CustomerNotification"
+      },
+      "to": {
+        "objectType": "Escalation"
+      }
+    },
+    {
+      "apiName": "deliveryRaisesDispute",
+      "displayName": "disputes",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "DeliveryOrder"
+      },
+      "to": {
+        "objectType": "Dispute"
+      }
+    },
+    {
+      "apiName": "shipmentRaisesDispute",
+      "displayName": "disputes",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "Shipment"
+      },
+      "to": {
+        "objectType": "Dispute"
+      }
+    },
+    {
+      "apiName": "calloffRaisesCarryDispute",
+      "displayName": "claims carry cost (cancelled)",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "CallOff"
+      },
+      "to": {
+        "objectType": "Dispute"
+      }
+    },
+    {
+      "apiName": "poRaisesException",
+      "displayName": "mismatch raises",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "PurchaseOrder"
+      },
+      "to": {
+        "objectType": "Exception"
+      }
+    },
+    {
+      "apiName": "demandConstrainsProduction",
+      "displayName": "constrains",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "DemandPlan"
+      },
+      "to": {
+        "objectType": "ProductionPlan"
+      }
+    },
+    {
+      "apiName": "demandNetsContracts",
+      "displayName": "nets contract book",
+      "kind": "dependency",
+      "cardinality": "many_to_many",
+      "from": {
+        "objectType": "DemandPlan"
+      },
+      "to": {
+        "objectType": "Contract"
+      }
+    },
+    {
+      "apiName": "productionReleasesProcessOrders",
+      "displayName": "releases",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "ProductionPlan"
+      },
+      "to": {
+        "objectType": "ProcessOrder"
+      }
+    },
+    {
+      "apiName": "productionScheduledAtPlant",
+      "displayName": "scheduled at",
+      "kind": "association",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "ProductionPlan"
+      },
+      "to": {
+        "objectType": "Plant"
+      }
+    },
+    {
+      "apiName": "processOrderRunsOnLine",
+      "displayName": "runs on",
+      "kind": "association",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "ProcessOrder"
+      },
+      "to": {
+        "objectType": "ProductionLine"
+      }
+    },
+    {
+      "apiName": "linePartOfPlant",
+      "displayName": "part of",
+      "kind": "association",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "ProductionLine"
+      },
+      "to": {
+        "objectType": "Plant"
+      }
+    },
+    {
+      "apiName": "processOrderRunsRecipe",
+      "displayName": "runs",
+      "kind": "association",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "ProcessOrder"
+      },
+      "to": {
+        "objectType": "Recipe"
+      }
+    },
+    {
+      "apiName": "recipeComposedOfComponents",
+      "displayName": "composed of",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "Recipe"
+      },
+      "to": {
+        "objectType": "BlendComponent"
+      }
+    },
+    {
+      "apiName": "componentDrawsFromStock",
+      "displayName": "draws from (incl. rework)",
+      "kind": "association",
+      "cardinality": "many_to_many",
+      "from": {
+        "objectType": "BlendComponent"
+      },
+      "to": {
+        "objectType": "StockPosition"
+      }
+    },
+    {
+      "apiName": "recipeYieldsProduct",
+      "displayName": "yields",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "Recipe"
+      },
+      "to": {
+        "objectType": "Product"
+      }
+    },
+    {
+      "apiName": "recipeYieldPredicted",
+      "displayName": "yield predicted as",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "Recipe"
+      },
+      "to": {
+        "objectType": "YieldRecord"
+      }
+    },
+    {
+      "apiName": "processOrderActualisesYield",
+      "displayName": "actualises",
+      "kind": "dependency",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "ProcessOrder"
+      },
+      "to": {
+        "objectType": "YieldRecord"
+      }
+    },
+    {
+      "apiName": "originSuppliesLots",
+      "displayName": "supplies",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "Origin"
+      },
+      "to": {
+        "objectType": "BeanLot"
+      }
+    },
+    {
+      "apiName": "supplierTendersOffers",
+      "displayName": "tenders",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "Supplier"
+      },
+      "to": {
+        "objectType": "Offer"
+      }
+    },
+    {
+      "apiName": "offerFromOrigin",
+      "displayName": "from",
+      "kind": "association",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "Offer"
+      },
+      "to": {
+        "objectType": "Origin"
+      }
+    },
+    {
+      "apiName": "offerPricedAgainstBasis",
+      "displayName": "priced against",
+      "kind": "dependency",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "Offer"
+      },
+      "to": {
+        "objectType": "BasisCurve"
+      }
+    },
+    {
+      "apiName": "offerAcceptedIntoContract",
+      "displayName": "accepted into",
+      "kind": "association",
+      "cardinality": "one_to_one",
+      "from": {
+        "objectType": "Offer"
+      },
+      "to": {
+        "objectType": "BeanPurchaseContract"
+      }
+    },
+    {
+      "apiName": "cropViewInformsProcurement",
+      "displayName": "informs",
+      "kind": "dependency",
+      "cardinality": "many_to_many",
+      "from": {
+        "objectType": "CropSdView"
+      },
+      "to": {
+        "objectType": "ProcurementPlan"
+      }
+    },
+    {
+      "apiName": "demandTranslatesToRequirement",
+      "displayName": "translates to",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "DemandPlan"
+      },
+      "to": {
+        "objectType": "DemandToBeanRequirement"
+      }
+    },
+    {
+      "apiName": "requirementViaRecipe",
+      "displayName": "via recipe linkage",
+      "kind": "association",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "DemandToBeanRequirement"
+      },
+      "to": {
+        "objectType": "Recipe"
+      }
+    },
+    {
+      "apiName": "requirementDrivesProcurement",
+      "displayName": "drives",
+      "kind": "association",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "DemandToBeanRequirement"
+      },
+      "to": {
+        "objectType": "ProcurementPlan"
+      }
+    },
+    {
+      "apiName": "procurementWorksWithinBasis",
+      "displayName": "works within stance",
+      "kind": "dependency",
+      "cardinality": "many_to_many",
+      "from": {
+        "objectType": "ProcurementPlan"
+      },
+      "to": {
+        "objectType": "BasisCurve"
+      }
+    },
+    {
+      "apiName": "procurementConstrainedByCover",
+      "displayName": "constrained by",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "ProcurementPlan"
+      },
+      "to": {
+        "objectType": "CoverPolicy"
+      }
+    },
+    {
+      "apiName": "coverPerPlant",
+      "displayName": "per factory",
+      "kind": "association",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "CoverPolicy"
+      },
+      "to": {
+        "objectType": "Plant"
+      }
+    },
+    {
+      "apiName": "coverPerOrigin",
+      "displayName": "per origin",
+      "kind": "association",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "CoverPolicy"
+      },
+      "to": {
+        "objectType": "Origin"
+      }
+    },
+    {
+      "apiName": "procurementExecutesAsContracts",
+      "displayName": "executes as",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "ProcurementPlan"
+      },
+      "to": {
+        "objectType": "BeanPurchaseContract"
+      }
+    },
+    {
+      "apiName": "contractDeliversLots",
+      "displayName": "delivers",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "BeanPurchaseContract"
+      },
+      "to": {
+        "objectType": "BeanLot"
+      }
+    },
+    {
+      "apiName": "lotLandsAsStock",
+      "displayName": "lands as",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "BeanLot"
+      },
+      "to": {
+        "objectType": "StockPosition"
+      }
+    },
+    {
+      "apiName": "lotRaisesLandedDispute",
+      "displayName": "claims (landed vs contracted)",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "BeanLot"
+      },
+      "to": {
+        "objectType": "Dispute"
+      }
+    },
+    {
+      "apiName": "scenarioEvaluatesProcurement",
+      "displayName": "evaluates",
+      "kind": "association",
+      "cardinality": "many_to_one",
+      "from": {
+        "objectType": "OptimizerScenario"
+      },
+      "to": {
+        "objectType": "ProcurementPlan"
+      }
+    },
+    {
+      "apiName": "decisionConsidersScenarios",
+      "displayName": "considers",
+      "kind": "association",
+      "cardinality": "one_to_many",
+      "from": {
+        "objectType": "DecisionRecord"
+      },
+      "to": {
+        "objectType": "OptimizerScenario"
+      }
+    },
+    {
+      "apiName": "decisionApprovesProcurement",
+      "displayName": "approves",
+      "kind": "association",
+      "cardinality": "one_to_one",
+      "from": {
+        "objectType": "DecisionRecord"
+      },
+      "to": {
+        "objectType": "ProcurementPlan"
+      }
+    }
+  ],
+  "actionTypes": [
+    {
+      "apiName": "approveCreditLimit",
+      "displayName": "Approve credit limit",
+      "description": "Set or raise a customer's credit limit; the enforced credit rules live here.",
+      "targetObjectType": "CreditProfile",
+      "mutates": true,
+      "parameters": [
+        {
+          "apiName": "requestedLimit",
+          "type": "double",
+          "required": true
+        },
+        {
+          "apiName": "paymentTermsDays",
+          "type": "integer",
+          "required": true
+        },
+        {
+          "apiName": "collateralPosted",
+          "type": "boolean"
+        }
+      ],
+      "validation": [
+        {
+          "rule": "paymentTermsDays <= 90",
+          "message": "Credit terms cannot exceed 90 days"
+        },
+        {
+          "rule": "requestedLimit <= creditProfile.limit || collateralPosted",
+          "message": "Above the approved limit requires collateral or a committee override"
+        }
+      ],
+      "authority": "user",
+      "authoritySource": "derived",
+      "targetClassification": "confidential"
+    },
+    {
+      "apiName": "raiseException",
+      "displayName": "Raise exception",
+      "description": "Open an order-triage exception when a mismatch or hold is detected.",
+      "targetObjectType": "Exception",
+      "mutates": true,
+      "parameters": [
+        {
+          "apiName": "type",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "price",
+            "qty",
+            "contract_fit",
+            "credit",
+            "other"
+          ]
+        },
+        {
+          "apiName": "routedToOwner",
+          "type": "string"
+        }
+      ],
+      "authority": "user",
+      "authoritySource": "derived",
+      "targetClassification": "unclassified"
+    },
+    {
+      "apiName": "allocateStockToOrder",
+      "displayName": "Allocate stock to order",
+      "description": "Allocate available stock to a sales order, respecting regional stock rules.",
+      "targetObjectType": "SalesOrder",
+      "mutates": true,
+      "parameters": [
+        {
+          "apiName": "quantity",
+          "type": "double",
+          "required": true
+        },
+        {
+          "apiName": "stockState",
+          "type": "string",
+          "enum": [
+            "unrestricted",
+            "allocated"
+          ]
+        }
+      ],
+      "authority": "user",
+      "authoritySource": "derived",
+      "targetClassification": "confidential"
+    }
+  ]
+}

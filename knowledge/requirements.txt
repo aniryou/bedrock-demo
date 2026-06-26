@@ -1,0 +1,3 @@
+# Runtime dependencies for the build/ scripts (validate.py, bindings.py, et al.).
+pyyaml>=6.0
+jsonschema>=4.18

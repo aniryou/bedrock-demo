@@ -1,0 +1,186 @@
+# Order-Triage AgentCore — Detailed Runtime Architecture
+
+The **live request / data plane**: how one `InvokeAgentRuntime` call flows from an
+Entra-authenticated caller, through the AgentCore Runtime and the Cedar-guarded
+Gateway, out to the stub Lambdas, and into Snowflake **as the calling human** (OBO).
+The grey **Observability** band is the *control plane* (telemetry, not request flow);
+build/publish/deploy (GitHub Actions, OIDC, ECR/S3 artifacts) are intentionally
+omitted — see the README for that pipeline.
+
+**Edge legend** — **thick** arrows are the primary request/data path; **thin** arrows
+are supporting reads/writes (incl. telemetry into CloudWatch); **dashed** arrows are
+identity / token / secret flows. **Colour** — blue = identity, green = compute,
+red = authorization (incl. the Guardrail), amber = data store, cyan = external
+Snowflake, grey = observability (control plane).
+
+> **See also — subsystem deep-dives.** This page is the end-to-end *data plane*. For
+> per-concern detail (each a different cross-section of the same call, in the same visual
+> grammar), see [`architecture/`](architecture/README.md): [Agent](architecture/agent-architecture.md) ·
+> [Security](architecture/security-architecture.md) · [Memory](architecture/memory-architecture.md) ·
+> [Observability](architecture/observability-architecture.md) · [Evaluation](architecture/evaluation-architecture.md).
+
+```mermaid
+flowchart LR
+  classDef idp fill:#e8f0fe,stroke:#3367d6,color:#1a237e;
+  classDef compute fill:#e6f4ea,stroke:#137333,color:#0b5394;
+  classDef authz fill:#fce8e6,stroke:#c5221f,color:#b71c1c;
+  classDef data fill:#fff3e0,stroke:#e8710a,color:#5f4100;
+  classDef ext fill:#e1f5fe,stroke:#0277bd,color:#01579b;
+  classDef obs fill:#eceff1,stroke:#546e7a,color:#263238;
+
+  user(["Analyst / Caller<br/>(human)"]):::idp
+
+  subgraph ENTRA_IN["Microsoft Entra ID — inbound (CUSTOM_JWT)"]
+    direction TB
+    feApp["Front-end app<br/>user sign-in"]:::idp
+    agentApp["Agent app<br/>aud of inbound JWT<br/>access_as_user"]:::idp
+  end
+
+  subgraph RT["Amazon Bedrock AgentCore — Runtime · us-west-2"]
+    direction TB
+    endpoint["Runtime Endpoint (DEFAULT)<br/>CUSTOM_JWT authorizer<br/>allowed_audience = api://agent-app"]:::compute
+    agent["AgentCore Runtime<br/>order_triage · arm64 · Strands loop"]:::compute
+    tools["Local tools<br/>search_policies · describe_entity · load_skill"]:::compute
+    mem[("AgentCore Memory<br/>facts · prefs · summaries")]:::data
+  end
+
+  subgraph BR["Amazon Bedrock"]
+    direction TB
+    model["Nova Lite<br/>amazon.nova-lite-v1:0<br/>ConverseStream"]:::compute
+    guard["Bedrock Guardrail<br/>PROMPT_ATTACK input filter (async)<br/>default-on · enable_guardrail"]:::authz
+    kb["Knowledge Base<br/>Titan Embed Text v2"]:::compute
+    s3v[("S3 Vectors index")]:::data
+  end
+
+  subgraph ENTRA_OBO["Microsoft Entra ID — OBO egress"]
+    direction TB
+    oboProv["entra-obo provider<br/>MicrosoftOauth2 + tenant_id"]:::idp
+    sfApp["Snowflake resource app<br/>api://.../session:role-any<br/>v1 tokens (upn, scp)"]:::idp
+  end
+
+  subgraph GW["AgentCore Gateway — MCP"]
+    direction TB
+    gwcore["MCP endpoint<br/>OpenAPI targets: sap · orders · snowflake"]:::compute
+    cedar["Cedar Policy Engine (ENFORCE)<br/>principal = AgentCore::OAuthUser<br/>guard: principal.hasTag('scp')<br/>permit_sap_read · permit_flag · permit_snowflake_ask"]:::authz
+    cpKey["snowflake-api-key provider<br/>(initial placeholder)"]:::authz
+    cpObo["entra-obo OAuth2 provider<br/>(swapped in for OBO)"]:::authz
+  end
+
+  subgraph LAM["AWS Lambda — arm64 · Function URLs"]
+    direction TB
+    saplam["SAP credit stub<br/>FN URL: AWS_IAM"]:::compute
+    ordlam["order-actions stub<br/>FN URL: AWS_IAM"]:::compute
+    sflam["snowflake-query stub<br/>FN URL: NONE + X-API-Key"]:::compute
+  end
+
+  sm[("Secrets Manager<br/>Snowflake RSA key + config<br/>entra-obo client secret")]:::data
+
+  subgraph SF["Snowflake · ap-southeast-1"]
+    direction TB
+    sfext["EXTERNAL_OAUTH (AZURE)<br/>upn → user · scp → role"]:::ext
+    sfdb[("ORDER_TRIAGE_DB<br/>ORDERS · CUSTOMERS<br/>RLS by region")]:::data
+  end
+
+  subgraph OBS["CloudWatch — Observability · control plane (telemetry, not request flow)"]
+    direction TB
+    cwobs["CloudWatch GenAI Observability<br/>per-turn token EMF · X-Ray traces<br/>model-invocation log (PII-masked)<br/>dashboards · alarms · SLOs"]:::obs
+  end
+
+  %% ---- Inbound identity ----
+  user -->|"1 · sign in"| feApp
+  feApp -.->|"2 · user access token<br/>(aud = agent app)"| user
+  user ==>|"3 · InvokeAgentRuntime<br/>Bearer: Entra user JWT"| endpoint
+  endpoint -.->|"validate aud / iss / scp"| agentApp
+  endpoint ==> agent
+
+  %% ---- Agent reasoning ----
+  agent ==>|"ConverseStream<br/>+ requestMetadata (agent/actor/session/turn)"| model
+  model -->|"guardrailConfig<br/>(when BEDROCK_GUARDRAIL_ID + VERSION set)"| guard
+  agent --> tools
+  tools -->|"Retrieve"| kb
+  kb --> s3v
+  agent <-->|"read / write context"| mem
+  agent ==>|"MCP tool calls<br/>(+ user JWT)"| gwcore
+
+  %% ---- Authorization + OBO brokering ----
+  gwcore -->|"authorize every call"| cedar
+  gwcore --- cpKey
+  gwcore --- cpObo
+  cpObo -.->|"OBO: GetWorkloadAccessTokenForJWT<br/>then GetResourceOauth2Token<br/>ON_BEHALF_OF_TOKEN_EXCHANGE<br/>scope session:role-any"| oboProv
+  oboProv -.->|"per-user Snowflake token<br/>(aud = sfApp)"| sfApp
+
+  %% ---- Egress to backends ----
+  gwcore ==>|"sap___getCreditStatus<br/>SigV4 · gateway IAM role"| saplam
+  gwcore ==>|"orders___flagOrder<br/>SigV4 · gateway IAM role"| ordlam
+  gwcore ==>|"snowflake___ask (NL question)<br/>Authorization: Bearer = OBO token<br/>(X-API-Key placeholder pre-OBO)"| sflam
+
+  %% ---- Backend data paths ----
+  ordlam -->|"status check · X-API-Key<br/>(OPEN-only)"| sflam
+  sflam -.->|"reads RSA key + config"| sm
+  sflam ==>|"user path: forward OBO Bearer<br/>token-type OAUTH"| sfext
+  sflam -->|"service fallback: signs KEYPAIR_JWT<br/>SVC_ORDER_TRIAGE (AGENT_RO, read-only)"| sfext
+  sfext ==> sfdb
+
+  %% ---- Observability (control plane; telemetry, not request flow) ----
+  endpoint -->|"app logs · traces"| cwobs
+  agent -->|"per-turn token EMF"| cwobs
+  gwcore -->|"app logs · traces"| cwobs
+  model -->|"invocation logging (PII-masked)"| cwobs
+```
+
+## How to read it
+
+**1 — Inbound identity (CUSTOM_JWT).** The human signs in to the Entra **front-end app**
+and receives a user access token whose `aud` is the **agent app**. `InvokeAgentRuntime`
+carries it as a Bearer; the Runtime Endpoint's **CUSTOM_JWT** authorizer validates
+`aud`/`iss` and that `scp` is present before any agent code runs.
+
+**2 — Agent reasoning.** The `order_triage` Strands agent streams to **Nova Lite**
+(`ConverseStream`, tagging each call with `requestMetadata` for the audit log), retrieves
+policy passages from the **Knowledge Base** (Titan v2 → S3 Vectors), reads/writes session
+**Memory** (short-term events **and** active long-term retrieval — facts/prefs/summaries,
+per-user `actor_id`), and reaches all backend data only through **MCP tool calls** to the
+Gateway — propagating the user JWT. When `BEDROCK_GUARDRAIL_ID`/`VERSION` are set (default-on
+via `enable_guardrail`), Strands attaches a **Bedrock Guardrail** `guardrailConfig` to the
+model path — an async `PROMPT_ATTACK` input filter.
+
+> **Model id:** the diagram shows the *deployed* model, **Nova Lite**
+> (`amazon.nova-lite-v1:0` via `var.bedrock_model_id`). The agent's code default in
+> `config.py` is `anthropic.claude-opus-4-8`; the Terraform-injected env var overrides it
+> at deploy time.
+
+**3 — Authorization (Cedar).** Every Gateway tool call is checked by the **Cedar Policy
+Engine** in `ENFORCE` mode. The principal is `AgentCore::OAuthUser`; the guard
+`principal.hasTag("scp")` admits any authenticated Entra user (a trivially-true
+`when{true}` is rejected by the engine's semantic validation). Three permits map to the
+tool actions: `permit_sap_read`, `permit_flag`, `permit_snowflake_ask` (one `snowflake___ask`
+analytics action — fine-grained row/column governance is in the semantic view + Snowflake RLS,
+see ADR-0008).
+
+**4 — Egress credentials (the split).**
+- **SAP & orders** targets use **SigV4** signed by the Gateway's IAM role against the
+  `AWS_IAM`-locked Lambda Function URLs — no credential provider, no shared key.
+- **snowflake** target uses **Entra OBO**: the Gateway exchanges the inbound user JWT for
+  a per-user, Snowflake-scoped token (`GetWorkloadAccessTokenForJWT` →
+  `GetResourceOauth2Token`, `ON_BEHALF_OF_TOKEN_EXCHANGE`, scope `session:role-any`) via
+  the `entra-obo` provider and injects it as `Authorization: Bearer`.
+
+**5 — Snowflake, as the human.** The snowflake-query Lambda has **two auth paths**:
+- **User path (OBO):** when the Gateway forwards a Bearer token, the Lambda presents *that*
+  to the Snowflake SQL REST API (`token-type OAUTH`). Snowflake's `EXTERNAL_OAUTH (AZURE)`
+  integration maps `upn → user` and `scp → role`, so queries run **as the calling human**
+  and **row-level security** returns only that user's entitled region.
+- **Service fallback:** with no Bearer (e.g. the order-actions status check via `X-API-Key`),
+  the Lambda signs a **KEYPAIR_JWT** as `SVC_ORDER_TRIAGE` (the read-only `AGENT_RO` role).
+
+`order-actions` (`flagOrder`) is a thin write-side stub: it reads the order's status from
+the snowflake-query Lambda (X-API-Key → service path), refuses anything not `OPEN`, and
+records the flag.
+
+**6 — Observability (control plane).** Off the request path, the Runtime and Gateway
+deliver **application logs and X-Ray traces** to **CloudWatch GenAI Observability**; the
+Runtime also emits a per-turn **token-usage EMF metric** (`OrderTriage/Agent`), and Bedrock
+**model-invocation logging** captures each call's tokens/identity/IO behind a CloudWatch
+data-protection PII mask. These feed the dashboards, alarms, SLOs and Contributor-Insights
+rules. Per-trace **AgentCore Online Evaluations** (LLM-judge) is wired in IaC but
+opt-in (`enable_online_evaluations`, default off) and is omitted here for clarity.

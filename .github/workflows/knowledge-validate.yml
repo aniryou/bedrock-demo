@@ -1,0 +1,87 @@
+name: knowledge · Validate ontology & bindings
+
+# Schema + referential-integrity checks, committed-artifact drift gates, and the
+# rendered ontology overview (published to the job summary). Path-filtered to
+# knowledge/. A merge of knowledge/ to main also triggers agent-build.yml, which
+# rebuilds the agent image against the in-tree knowledge (see agent-build.yml).
+
+on:
+  pull_request:
+    paths:
+      - "knowledge/**"
+      - ".github/workflows/knowledge-validate.yml"
+  push:
+    branches: [main]
+    paths:
+      - "knowledge/**"
+      - ".github/workflows/knowledge-validate.yml"
+
+defaults:
+  run:
+    working-directory: knowledge
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Schema + referential-integrity checks. Non-zero exit fails the PR.
+      - name: Validate and compile
+        run: python build/validate.py
+
+      # The agent consumes build/ontology.compiled.json, so it must be COMMITTED
+      # and match the source. This proves the shipped blob is the compile of the
+      # reviewed YAML — no hand-edits, no drift. (Commit the file after running
+      # validate.py locally.)
+      - name: Check compiled artifact is up to date
+        run: git diff --exit-code -- build/ontology.compiled.json
+
+      # Resolve every skill / KB reference against the compiled ontology. A skill
+      # (skills/**/*.skill.md or *.skill.yaml) or KB doc pointing at a renamed or
+      # removed apiName fails here — the cross-layer drift gate.
+      - name: Resolve skill / KB bindings
+        run: python build/bindings.py
+
+      # The agent consumes build/bindings.json, so it must be committed and current.
+      - name: Check bindings artifact is up to date
+        run: git diff --exit-code -- build/bindings.json
+
+      # Regenerate the lineage table fresh each run and attach it to the run.
+      - name: Generate lineage report
+        run: python build/lineage_report.py
+
+      # Render the ontology to an interactive HTML page (artifact) + a markdown
+      # overview (Mermaid graph + tables) for quick human inspection.
+      - name: Render ontology visual
+        run: python build/render_ontology.py
+
+      # Surface the ontology ON the Actions run page — no download needed. GitHub
+      # renders the Mermaid graph and tables natively in the job summary.
+      - name: Publish ontology overview to the job summary
+        if: always()
+        run: cat build/ontology-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      # upload-artifact's `path` is resolved from the workspace root (it ignores
+      # `defaults.run.working-directory`), so these are knowledge/-prefixed.
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ontology-build
+          path: |
+            knowledge/build/ontology.html
+            knowledge/build/ontology.compiled.json
+            knowledge/build/bindings.json
+            knowledge/build/bindings.md
+            knowledge/build/lineage.md
+            knowledge/build/lineage.csv
+          if-no-files-found: error

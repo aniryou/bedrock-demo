@@ -1,0 +1,98 @@
+name: agent · Build & publish (image + KB)
+
+# Publishes the artifacts infra/ consumes as Terraform inputs: the ARM64 container
+# image (-> ECR) and the KB policy docs (-> artifacts S3). The agent bakes
+# skills/ontology/KB from the in-tree knowledge/ folder, so a knowledge/ change
+# rebuilds the image too.
+#
+# Triggers:
+#   push: main (agent/** or knowledge/** changed) - rebuild + publish, then cascade to the gated deploy
+#   workflow_dispatch                              - manual
+#
+# Auth via GitHub OIDC. Requires (see infra/docs/playbooks/cd-setup.md):
+#   secrets: AWS_PUBLISH_ROLE_ARN, ECR_REPOSITORY_URL, ARTIFACTS_BUCKET,
+#            DISPATCH_TOKEN (a PAT; the in-repo cascade to deploy.yml is skipped without it)
+#   vars:    AWS_REGION (optional; defaults to us-west-2)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "agent/**"
+      - "knowledge/**"
+      - ".github/workflows/agent-build.yml"
+  workflow_dispatch:
+    inputs:
+      region:
+        description: AWS region
+        default: us-west-2
+
+concurrency:
+  group: build-publish-agent
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+defaults:
+  run:
+    working-directory: agent
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ github.event.inputs.region || vars.AWS_REGION || 'us-west-2' }}
+      DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_PUBLISH_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Cross-build linux/arm64 on the x86 runner: QEMU registers the binfmt
+      # handlers (without it, arm64 RUN steps fail with "exec format error"),
+      # buildx provides the multi-platform builder.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # Bakes skills + ontology bindings + kb/ from the in-tree ../knowledge folder
+      # (fetch_skills.sh prefers the local sibling). The shipped image therefore
+      # matches the knowledge committed in this same revision.
+      - name: Fetch skills into the build context
+        run: SKILLS_DIR=skills make skills
+
+      - name: Build + push ARM64 image to ECR
+        id: image
+        run: |
+          ECR="${{ secrets.ECR_REPOSITORY_URL }}"
+          TAG="${GITHUB_SHA::12}"
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | docker login --username AWS --password-stdin "${ECR%%/*}"
+          docker buildx build --platform linux/arm64 \
+            -t "$ECR:$TAG" -t "$ECR:latest" --push .
+          echo "image_uri=$ECR:$TAG" >> "$GITHUB_OUTPUT"
+          echo "Pushed $ECR:$TAG (and :latest)"
+
+      # `make skills` (above) fetched the KB policy docs into ./kb from the in-tree
+      # knowledge; index.yaml is the build manifest and is never ingested.
+      - name: Publish KB docs to the artifacts bucket
+        run: aws s3 sync kb "s3://${{ secrets.ARTIFACTS_BUCKET }}/kb/" --exclude "index.yaml" --delete
+
+      - name: Cascade -> trigger the gated deploy
+        if: ${{ env.DISPATCH_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ env.DISPATCH_TOKEN }}
+          IMAGE_URI: ${{ steps.image.outputs.image_uri }}
+        run: |
+          jq -nc --arg img "$IMAGE_URI" \
+            '{event_type:"agent-image-published",
+              client_payload:{image_uri:$img, source:"agent"}}' \
+            | gh api repos/aniryou/bedrock-demo/dispatches --input -
+          echo "Dispatched agent-image-published (image=$IMAGE_URI) -> deploy.yml"

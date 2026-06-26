@@ -1,0 +1,53 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Dummy SAP API",
+    "version": "1.0.0",
+    "description": "Minimal SAP-like credit service used as an AgentCore Gateway target."
+  },
+  "servers": [
+    { "url": "https://REPLACE_WITH_LAMBDA_FUNCTION_URL", "description": "Lambda Function URL (set by bedrock-demo-infra)" }
+  ],
+  "components": {
+    "schemas": {
+      "CreditStatus": {
+        "type": "object",
+        "properties": {
+          "customer_id": { "type": "string" },
+          "known": { "type": "boolean" },
+          "on_hold": { "type": "boolean" },
+          "available_credit": { "type": "number" },
+          "balance": { "type": "number" },
+          "currency": { "type": "string" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/credit-status/{customer_id}": {
+      "get": {
+        "operationId": "getCreditStatus",
+        "summary": "Get the SAP credit status for a customer",
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Customer id, e.g. C-001"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Credit status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CreditStatus" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

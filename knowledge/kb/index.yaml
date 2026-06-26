@@ -1,0 +1,31 @@
+# KB registry. Each document (and, where possible, each chunk) declares the
+# ontology entities/properties it `concerns`. At query time, retrieval is
+# filtered or boosted to chunks whose concerns intersect the entities in
+# context — so a check that must fire doesn't depend on top-k luck.
+# build/bindings.py resolves every reference and checks each `path` exists.
+kb:
+  - apiName: kb_credit_policy
+    title: "Customer Credit Policy"
+    path: kb/credit-policy.md
+    provenance: { uri: "internal://policies/credit", version: "4.2", retrievedAt: "2026-01-15" }
+    concerns:
+      objectTypes: [CreditProfile, Customer]
+      properties:  [CreditProfile.terms, CreditProfile.exposure]
+    chunks:
+      - { id: c01, heading: "Standard terms and limits",        concerns: { objectTypes: [CreditProfile] } }
+      - { id: c12, heading: "Collateral for high-risk markets",  concerns: { objectTypes: [CreditProfile], properties: [CreditProfile.exposure] } }
+      - { id: c20, heading: "Committee override process",         concerns: { objectTypes: [CreditProfile, CustomerProfile] } }
+
+  - apiName: kb_dispute_policy
+    title: "Dispute and Cancellation Policy"
+    path: kb/dispute-policy.md
+    provenance: { uri: "internal://policies/dispute", version: "1.0", retrievedAt: "2026-06-21" }
+    concerns:
+      objectTypes: [SalesOrder, Dispute]
+
+  - apiName: kb_order_review_policy
+    title: "Order Review Policy"
+    path: kb/order-review-policy.md
+    provenance: { uri: "internal://policies/order-review", version: "1.0", retrievedAt: "2026-06-21" }
+    concerns:
+      objectTypes: [SalesOrder, CreditProfile]

@@ -1,0 +1,72 @@
+name: stubs · Publish artifacts
+
+# Builds the three Lambda zips and uploads them + their OpenAPI specs to the
+# artifacts S3 bucket. infra/ references the zips by s3_key (Lambda code) and reads
+# the OpenAPI specs via aws_s3_object data sources (gateway targets).
+#
+# Triggers:
+#   push: main (stubs/** changed) - auto-publish on merge, then cascade to the gated deploy
+#   workflow_dispatch              - manual
+#
+# Auth via GitHub OIDC. Requires (see infra/docs/playbooks/cd-setup.md):
+#   secrets: AWS_PUBLISH_ROLE_ARN, ARTIFACTS_BUCKET,
+#            DISPATCH_TOKEN (a PAT; the in-repo cascade to deploy.yml is skipped without it —
+#            GITHUB_TOKEN-triggered repository_dispatch deliberately does not start new runs)
+#   vars:    AWS_REGION (optional; defaults to us-west-2)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "stubs/**"
+      - ".github/workflows/stubs-release.yml"
+  workflow_dispatch:
+    inputs:
+      region:
+        description: AWS region
+        default: us-west-2
+
+concurrency:
+  group: publish-stubs
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+defaults:
+  run:
+    working-directory: stubs
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ github.event.inputs.region || vars.AWS_REGION || 'us-west-2' }}
+      DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_PUBLISH_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Build Lambda zips
+        run: ./build_lambdas.sh
+      - name: Upload zips + OpenAPI specs to artifacts bucket
+        run: |
+          B="s3://${{ secrets.ARTIFACTS_BUCKET }}/stubs"
+          aws s3 cp build/sap.zip "$B/sap.zip"
+          aws s3 cp build/order_actions.zip "$B/order_actions.zip"
+          aws s3 cp build/snowflake.zip "$B/snowflake.zip"
+          aws s3 cp sap_stub/openapi.json "$B/sap.openapi.json"
+          aws s3 cp order_actions_stub/openapi.json "$B/order_actions.openapi.json"
+          aws s3 cp snowflake_stub/openapi.json "$B/snowflake.openapi.json"
+      - name: Cascade -> trigger the gated deploy
+        if: ${{ env.DISPATCH_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ env.DISPATCH_TOKEN }}
+        run: |
+          jq -nc '{event_type:"stubs-published", client_payload:{source:"stubs"}}' \
+            | gh api repos/aniryou/bedrock-demo/dispatches --input -
+          echo "Dispatched stubs-published -> deploy.yml"

@@ -1,0 +1,217 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>AgentCore Evaluations × Strands 1.44 incompatibility</title>
+<style>
+@page { size: Letter; margin: 0.7in 0.75in; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; font-size: 10.5pt;
+       line-height: 1.5; color: #1a1a1a; max-width: 100%; }
+h1 { font-size: 19pt; line-height: 1.25; border-bottom: 3px solid #137333; padding-bottom: 8px;
+     margin: 0 0 14px; color: #0b3d12; }
+h2 { font-size: 14pt; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd; color: #c5221f; }
+h3 { font-size: 11.5pt; margin: 16px 0 6px; color: #5f4100; }
+p { margin: 7px 0; }
+a { color: #1155cc; text-decoration: none; }
+hr { border: none; border-top: 1px solid #ddd; margin: 18px 0; }
+strong { color: #111; }
+ul, ol { margin: 7px 0 7px 4px; padding-left: 20px; }
+li { margin: 3px 0; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; table-layout: fixed; }
+th, td { border: 1px solid #cfcfcf; padding: 5px 8px; text-align: left; vertical-align: top;
+         overflow-wrap: anywhere; word-break: break-word; }
+th { background: #f1f3f4; font-weight: 600; }
+tr:nth-child(even) td { background: #fafafa; }
+code { font-family: "SF Mono", "Menlo", Consolas, monospace; font-size: 8.6pt;
+       background: #f3f3f3; padding: 1px 4px; border-radius: 3px; overflow-wrap: anywhere; }
+pre { background: #f7f8fa; border: 1px solid #e1e4e8; border-radius: 5px; padding: 10px 12px;
+      font-size: 8.2pt; line-height: 1.42; overflow-x: hidden; white-space: pre-wrap;
+      word-break: break-word; overflow-wrap: anywhere; page-break-inside: avoid; }
+pre code { background: none; padding: 0; font-size: inherit; }
+blockquote { margin: 10px 0; padding: 6px 14px; border-left: 4px solid #e8710a;
+             background: #fffaf2; color: #4a3a1a; }
+blockquote p { margin: 3px 0; }
+img { display: block; margin: 14px auto; max-width: 100%; height: auto; page-break-inside: avoid;
+      border: 1px solid #eee; }
+h2, h3 { page-break-after: avoid; }
+</style></head><body><h1>AgentCore Online Evaluations cannot score Strands ≥ 1.44 traces — <code>AgentSpanMappingException</code></h1>
+<p><strong>Prepared for:</strong> AWS Bedrock AgentCore team / AWS Support
+<strong>From:</strong> order-triage demo team (Anil Choudhary)
+<strong>Account / Region:</strong> <code>953472632913</code> / <code>us-west-2</code>
+<strong>Date:</strong> 2026-06-24
+<strong>Severity:</strong> Feature-blocking (the service runs, provisions, and bills, but produces <strong>zero</strong> usable output)
+<strong>Status:</strong> Reproduced live today; root cause isolated to an AWS-owned format mismatch; no agent-side workaround exists (two were tried and reverted).</p>
+<hr />
+<h2>1. The issue in plain terms</h2>
+<p>We enabled <strong>Amazon Bedrock AgentCore Online Evaluations</strong> — the native, LLM-as-judge service that samples a deployed agent's live traces and scores them for Correctness, Helpfulness, Faithfulness, and tool-call accuracy. Everything provisions and runs: the config is <code>ACTIVE</code>, the judge fires on every sampled trace, IAM is correct, and the result records are written.</p>
+<p><strong>But every single evaluation fails to parse the trace, and we get zero numeric scores.</strong> Each result is an error, not a score.</p>
+<p>The cause is a <strong>format mismatch between two AWS-owned components</strong>:</p>
+<ul>
+<li><strong>Strands</strong> (the AWS agent SDK), at <strong>version 1.44</strong>, emits the prompt/response content using the <strong>newer OpenTelemetry GenAI semantic convention</strong> — the OTel v1.37 <em>"parts"</em> content shape. It only emits the content event we need when we opt into that convention via <code>OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental</code>.</li>
+<li><strong>AgentCore Online Evaluations</strong>' span-to-evaluation <strong>mapper expects the older, flat content shape</strong> and tries to read <code>user_query</code> directly out of it. It cannot parse the "parts" shape, so it throws:</li>
+</ul>
+<blockquote>
+<p><code>AgentSpanMappingException: Failed to parse user_query from agent-span with spanId: &lt;id&gt; and scope: strands.telemetry.tracer</code></p>
+</blockquote>
+<p>The error string itself names both AWS components: it failed to read <code>user_query</code>, from a span whose instrumentation <code>scope</code> is <code>strands.telemetry.tracer</code>.</p>
+<p><strong>Why we can't work around it from our side:</strong> we cannot simply turn off the new convention, because the aggregate content event the evaluator reads <em>only exists</em> under <code>gen_ai_latest_experimental</code>. Turning it off trades <code>AgentSpanMappingException</code> for a <em>different</em> error (<code>LogEventMissingException</code>). And when we tried to reshape the content in our own agent code, <strong>AgentCore's delivery layer re-wraps the content before the mapper sees it</strong>, so no client-side shape satisfies it. This is an upstream incompatibility that has to be fixed in the AgentCore eval mapper (or in what Strands emits) — not in our agent.</p>
+<p><p>[diagram omitted for size test]</p></p>
+<hr />
+<h2>2. Environment (verified today)</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Online evaluation config</td>
+<td><code>order_triage_online_evals-7nK2307vE8</code> (<strong><code>ACTIVE</code></strong>)</td>
+</tr>
+<tr>
+<td>Service name</td>
+<td><code>order_triage.DEFAULT</code></td>
+</tr>
+<tr>
+<td>Evaluators (all 5 fail)</td>
+<td><code>Builtin.Correctness</code>, <code>Builtin.Helpfulness</code>, <code>Builtin.Faithfulness</code>, <code>Builtin.ToolSelectionAccuracy</code>, <code>Builtin.ToolParameterAccuracy</code></td>
+</tr>
+<tr>
+<td>Sampling</td>
+<td><code>samplingPercentage = 100</code></td>
+</tr>
+<tr>
+<td>Data-source log groups</td>
+<td><code>aws/spans</code> (X-Ray Transaction Search) <strong>+</strong> <code>/aws/bedrock-agentcore/runtimes/order_triage-cwG2Pw7Bnv-DEFAULT</code></td>
+</tr>
+<tr>
+<td>Results log group</td>
+<td><code>/aws/bedrock-agentcore/evaluations/results/order_triage_online_evals-7nK2307vE8</code></td>
+</tr>
+<tr>
+<td>Agent SDK</td>
+<td><strong><code>strands-agents</code> 1.44.0</strong></td>
+</tr>
+<tr>
+<td>OTel runtime</td>
+<td><code>opentelemetry-api</code> / <code>opentelemetry-sdk</code> <strong>1.40.0</strong>, <code>opentelemetry-semantic-conventions</code> <strong>0.61b0</strong></td>
+</tr>
+<tr>
+<td>AWS OTel distro</td>
+<td><code>aws-opentelemetry-distro</code> <strong>0.17.1</strong> (launched via <code>opentelemetry-instrument</code>)</td>
+</tr>
+<tr>
+<td>Runtime env (load-bearing)</td>
+<td><code>OTEL_SEMCONV_STABILITY_OPT_IN = gen_ai_latest_experimental,gen_ai_tool_definitions</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>For contrast: AWS's own working Online-Evaluations example documents <code>telemetry.auto.version 0.12.2-aws</code>. The shape that mapper was validated against is the <em>older</em> (pre-v1.37) content shape — which is the crux of this report.</p>
+</blockquote>
+<hr />
+<h2>3. Expected vs. actual</h2>
+<p><strong>Expected:</strong> each sampled trace yields a <code>gen_ai.evaluation.result</code> record carrying a numeric <code>gen_ai.evaluation.score</code> per evaluator, which then surfaces in CloudWatch / GenAI Observability.</p>
+<p><strong>Actual:</strong> each sampled trace yields a <code>gen_ai.evaluation.result</code> record with <code>error.type = "AgentSpanMappingException"</code>, <code>error = 1</code>, and <strong>no <code>gen_ai.evaluation.score</code> field at all</strong>. Over the most recent 12-hour window, <strong>48 of 48</strong> result records are errors; 0 scores.</p>
+<hr />
+<h2>4. The precise technical issue</h2>
+<h3>4.1 The error (live, from the results log group)</h3>
+<p>A representative result record, fetched today from <code>/aws/bedrock-agentcore/evaluations/results/order_triage_online_evals-7nK2307vE8</code>:</p>
+<div class="codehilite" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>{
+<span style="color: #BBB">  </span><span style="color: #008000; font-weight: bold">&quot;name&quot;</span>:<span style="color: #BBB"> </span><span style="color: #BA2121">&quot;gen_ai.evaluation.result&quot;</span>,
+<span style="color: #BBB">  </span><span style="color: #008000; font-weight: bold">&quot;attributes&quot;</span>:<span style="color: #BBB"> </span>{
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">&quot;gen_ai.evaluation.name&quot;</span>:<span style="color: #BBB"> </span><span style="color: #BA2121">&quot;Builtin.Correctness&quot;</span>,
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">&quot;session.id&quot;</span>:<span style="color: #BBB"> </span><span style="color: #BA2121">&quot;status-check-1782264057-padpadpadpadpadpadpadpadpad&quot;</span>,
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">&quot;gen_ai.response.id&quot;</span>:<span style="color: #BBB"> </span><span style="color: #BA2121">&quot;6a3b30fa728131a2506b931e3c6cc499&quot;</span>,
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">&quot;error.type&quot;</span>:<span style="color: #BBB"> </span><span style="color: #BA2121">&quot;AgentSpanMappingException&quot;</span>,
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">&quot;error.message&quot;</span>:<span style="color: #BBB"> </span><span style="color: #BA2121">&quot;Failed to parse user_query from agent-span with spanId: c8a70359e4ff5fbb and scope: strands.telemetry.tracer&quot;</span>,
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">&quot;error&quot;</span>:<span style="color: #BBB"> </span><span style="color: #666">1</span>,
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">&quot;throttle&quot;</span>:<span style="color: #BBB"> </span><span style="color: #666">0</span>,
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">&quot;aws.bedrock_agentcore.online_evaluation_config.name&quot;</span>:<span style="color: #BBB"> </span><span style="color: #BA2121">&quot;order_triage_online_evals&quot;</span>,
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">&quot;aws.bedrock_agentcore.evaluator.arn&quot;</span>:<span style="color: #BBB"> </span><span style="color: #BA2121">&quot;arn:aws:bedrock-agentcore:::evaluator/Builtin.Correctness&quot;</span>,
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">&quot;aws.bedrock_agentcore.evaluator.rating_scale&quot;</span>:<span style="color: #BBB"> </span><span style="color: #BA2121">&quot;Numerical&quot;</span>,
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">&quot;aws.bedrock_agentcore.evaluation_level&quot;</span>:<span style="color: #BBB"> </span><span style="color: #BA2121">&quot;Trace&quot;</span>
+<span style="color: #BBB">  </span>},
+<span style="color: #BBB">  </span><span style="color: #008000; font-weight: bold">&quot;onlineEvaluationConfigId&quot;</span>:<span style="color: #BBB"> </span><span style="color: #BA2121">&quot;order_triage_online_evals-7nK2307vE8&quot;</span>
+}
+</code></pre></div>
+
+<p>The same error appears for the span-level tool evaluators, e.g. <code>Builtin.ToolParameterAccuracy</code> with <code>"aws.bedrock_agentcore.evaluation_level": "Span"</code> and <code>"error.message": "Failed to parse user_query from agent-span with spanId: e162c28d7d6f1ffb and scope: strands.telemetry.tracer"</code>. <strong>Note there is no <code>gen_ai.evaluation.score</code> key on any of these records.</strong></p>
+<h3>4.2 The content the mapper is choking on</h3>
+<p>The judge correlates content to the span via <code>spanId</code>, reading the per-span <code>gen_ai</code> content events that Strands writes to the runtime <code>-DEFAULT</code> log group. Here is the <strong>actual delivered content</strong> for one such span (scope <code>strands.telemetry.tracer</code>), captured live today. Content is truncated; <strong>the shapes are verbatim</strong>:</p>
+<div class="codehilite" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>// body.input.messages[] — as delivered to /aws/bedrock-agentcore/runtimes/order_triage-cwG2Pw7Bnv-DEFAULT
+[
+  {
+    &quot;role&quot;: &quot;system&quot;,
+    // OTel v1.37 &quot;parts&quot; shape (stringified): [{&quot;type&quot;:&quot;text&quot;,&quot;content&quot;: ...}]
+    &quot;content&quot;: &quot;[{\&quot;type\&quot;: \&quot;text\&quot;, \&quot;content\&quot;: \&quot;You are an order-triage assistant for orders, customers, credit, and disputes. ...\&quot;}]&quot;
+  },
+  {
+    &quot;role&quot;: &quot;user&quot;,
+    // RE-WRAPPED aggregate (stringified, doubly nested): [{&quot;role&quot;:..,&quot;content&quot;:&quot;[{\&quot;text\&quot;:..}]&quot;}]
+    &quot;content&quot;: &quot;[{\&quot;role\&quot;: \&quot;user\&quot;, \&quot;content\&quot;: \&quot;[{\\\&quot;text\\\&quot;: \\\&quot;&lt;user_context&gt;The user requested triage of order O-1003 ...\\\&quot;}]\&quot;}]&quot;
+  }
+]
+</code></pre></div>
+
+<p>This is the smoking gun, and it shows <strong>two distinct problems at once</strong>:</p>
+<ol>
+<li><strong>Wrong convention.</strong> The <code>system</code> message content is in the OTel v1.37 <strong><code>parts</code></strong> shape — <code>[{"type":"text","content":"…"}]</code> — not the flat text / native Bedrock <code>ContentBlocks</code> that AWS's mapper was built to read.</li>
+<li><strong>Inconsistent re-wrapping.</strong> The <code>user</code> message — the one the mapper needs for <code>user_query</code> — is <strong>not</strong> even in the <code>parts</code> shape; it arrives as a whole serialized <code>[{"role":"user","content":"[{\"text\":…}]"}]</code> <strong>aggregate</strong>, where <code>content</code> is itself a stringified array. So within a single span, the <strong>system</strong> message and the <strong>user</strong> message are delivered in <strong>two different shapes</strong>. The mapper has no single rule that can extract <code>user_query</code> from this.</li>
+</ol>
+<h3>4.3 Why this is upstream, not ours</h3>
+<p>The instrumentation <code>scope</code> in the error is <code>strands.telemetry.tracer</code> — i.e. AgentCore is reporting that it received a span emitted by Strands' own tracer and could not map it. Both producer (Strands SDK) and consumer (AgentCore Evaluations mapper) are AWS-owned. The agent contributes <strong>no custom telemetry</strong>; it runs the stock <code>opentelemetry-instrument</code> entrypoint and the documented <code>OTEL_SEMCONV_STABILITY_OPT_IN</code> env var.</p>
+<hr />
+<h2>5. The catch-22 (why "just disable the new convention" does not work)</h2>
+<p>The obvious workaround — drop <code>gen_ai_latest_experimental</code> so Strands emits the older shape — is <strong>not viable</strong>:</p>
+<ul>
+<li><strong>With</strong> <code>gen_ai_latest_experimental</code>: the aggregate <code>body.input.messages</code> content event <em>exists</em> (good — the evaluator has something to read), but its content is in the v1.37 <code>parts</code> shape the mapper can't parse → <strong><code>AgentSpanMappingException</code></strong> (this report).</li>
+<li><strong>Without</strong> <code>gen_ai_latest_experimental</code>: Strands does not emit the aggregate <code>body.input.messages</code> content event at all, so the evaluator finds no content for the span → <strong><code>LogEventMissingException: "Session span data is incomplete … missing a corresponding log event"</code></strong> (we confirmed this earlier on the prior config <code>…-dJ3KO96WVM</code>).</li>
+</ul>
+<p>So one AgentCore feature (Online Evaluations) requires content that, in this SDK/runtime version, only materializes under a convention that a second AgentCore feature (the eval mapper) cannot read. There is no env-var combination on our side that satisfies both.</p>
+<hr />
+<h2>6. Workarounds we attempted (and why they failed)</h2>
+<p>We tried to reshape the emitted content in our own agent code by monkeypatching Strands' tracer. <strong>Both attempts were deployed, live-validated, and scored zero — then reverted.</strong></p>
+<ol>
+<li><strong>Patched <code>Tracer._add_event</code></strong> to rewrite the <code>{role, parts}</code> envelope toward native <code>{role, content}</code>. Result: <strong>AgentCore re-wrapped</strong> the delivered content, so the mapper still failed to parse <code>user_query</code>. 0 scores.</li>
+<li><strong>Patched <code>Tracer._map_content_blocks_to_otel_parts</code></strong> to emit native Bedrock <code>ContentBlocks</code> as the OTel parts. Result: the <strong>system</strong> message then arrived native, but the <strong>user</strong> message still arrived as the whole serialized <code>[{role, content}]</code> aggregate (the re-wrap in §4.2). 0 scores.</li>
+</ol>
+<p>The conclusion from these experiments: <strong>AgentCore's delivery layer re-wraps <code>input.messages</code> content after our code runs and before the mapper reads it</strong>, and it does so <em>inconsistently</em> between the system and user messages. No single client-side content shape can satisfy both the <code>user_query</code> parse (which wants flat content) and the tool-trajectory evaluators (which want structured tool detail). We reverted both shims because they were no-ops for evaluation and made our OTel spans non-standard (native blocks where OTel parts are expected), which risks confusing the GenAI-Observability content display.</p>
+<p>We have <strong>kept Online Evaluations enabled</strong> (harmlessly erroring) and <strong>kept</strong> <code>gen_ai_latest_experimental</code> on the runtime, because the gen_ai content capture has standalone GenAI-Observability value independent of scoring.</p>
+<hr />
+<h2>7. What we are asking AWS</h2>
+<p>In rough priority order:</p>
+<ol>
+<li><strong>Make the AgentCore Evaluations mapper parse the OTel v1.37 <code>parts</code> content convention</strong> emitted by Strands ≥ 1.44 under <code>gen_ai_latest_experimental</code>. This is the standard, forward-looking direction and would unblock us with no agent change.</li>
+<li><strong>Fix the inconsistent re-wrapping of <code>input.messages</code></strong> in the delivery path — the system message and user message of the same span arrive in different shapes (§4.2). Even a mapper that understood <code>parts</code> would still need the user message to be in a parseable shape.</li>
+<li><strong>Publish a known-good compatibility matrix</strong> for Online Evaluations: which <code>strands-agents</code> / <code>aws-opentelemetry-distro</code> / <code>OTEL_SEMCONV_STABILITY_OPT_IN</code> combinations the mapper currently supports. AWS's working example references <code>telemetry.auto.version 0.12.2-aws</code>; current Strands resolves a much newer OTel stack (1.40.0 / semconv 0.61b0). A documented matrix would let customers pin a working set instead of discovering this by trial.</li>
+<li><strong>Confirm the <code>gen_ai_latest_experimental</code> dependency.</strong> Online Evaluations appears to require an aggregate content event that only exists under that opt-in, while the mapper only understands the pre-opt-in shape (§5). If that is a known transitional state, please document the supported path.</li>
+</ol>
+<p>If a specific older <code>aws-opentelemetry-distro</code> pin is the supported workaround today, we will take that as an interim answer — but note it would affect <strong>all</strong> of our observability instrumentation, not just evaluations, so we would weigh it carefully.</p>
+<hr />
+<h2>8. Appendix — reproduce the evidence</h2>
+<p><strong>A. Confirm the config is active</strong></p>
+<div class="codehilite" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>aws<span style="color: #BBB"> </span>bedrock-agentcore-control<span style="color: #BBB"> </span>list-online-evaluation-configs<span style="color: #BBB"> </span>--region<span style="color: #BBB"> </span>us-west-2<span style="color: #BBB"> </span><span style="color: #AA5D1F; font-weight: bold">\</span>
+<span style="color: #BBB">  </span>--query<span style="color: #BBB"> </span><span style="color: #BA2121">&quot;onlineEvaluationConfigs[?onlineEvaluationConfigName==&#39;order_triage_online_evals&#39;].{id:onlineEvaluationConfigId,status:status}&quot;</span>
+<span style="color: #3D7B7B; font-style: italic"># -&gt; order_triage_online_evals-7nK2307vE8 / ACTIVE</span>
+</code></pre></div>
+
+<p><strong>B. See the errors (CloudWatch Logs / Logs Insights), results log group</strong></p>
+<div class="codehilite" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>SOURCE &quot;/aws/bedrock-agentcore/evaluations/results/order_triage_online_evals-7nK2307vE8&quot; START=-43200s END=0s
+</code></pre></div>
+
+<p>Every <code>gen_ai.evaluation.result</code> record carries <code>attributes.error.type = "AgentSpanMappingException"</code>, <code>attributes.error = 1</code>, and no <code>gen_ai.evaluation.score</code>. (Console path: CloudWatch → Logs → that log group → <em>View in Logs Insights</em>; filter/highlight <code>AgentSpanMappingException</code>; expand any record.)</p>
+<p><strong>C. Inspect the delivered content shape that the mapper rejects</strong> (runtime <code>-DEFAULT</code> group):</p>
+<div class="codehilite" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>aws<span style="color: #BBB"> </span>logs<span style="color: #BBB"> </span>filter-log-events<span style="color: #BBB"> </span>--region<span style="color: #BBB"> </span>us-west-2<span style="color: #BBB"> </span><span style="color: #AA5D1F; font-weight: bold">\</span>
+<span style="color: #BBB">  </span>--log-group-name<span style="color: #BBB"> </span><span style="color: #BA2121">&quot;/aws/bedrock-agentcore/runtimes/order_triage-cwG2Pw7Bnv-DEFAULT&quot;</span><span style="color: #BBB"> </span><span style="color: #AA5D1F; font-weight: bold">\</span>
+<span style="color: #BBB">  </span>--filter-pattern<span style="color: #BBB"> </span><span style="color: #BA2121">&#39;&quot;input.messages&quot;&#39;</span>
+<span style="color: #3D7B7B; font-style: italic"># Look at body.input.messages[].content — system msg is OTel-parts; user msg is a re-wrapped [{role,content}] aggregate.</span>
+</code></pre></div>
+
+<p><strong>D. Versions</strong></p>
+<div class="codehilite" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code><span style="color: #3D7B7B; font-style: italic"># from the agent build (uv.lock): strands-agents 1.44.0, opentelemetry-* 1.40.0,</span>
+<span style="color: #3D7B7B; font-style: italic"># opentelemetry-semantic-conventions 0.61b0, aws-opentelemetry-distro 0.17.1</span>
+</code></pre></div>
+
+<hr />
+<p><em>Internal cross-reference (not for AWS): this is tracked in <code>bedrock-demo-infra/docs/adr/0005-online-evaluations.md</code> (Risk R1 / Decision D7) and the evaluation-architecture doc; agent-side shim attempts were PRs #25 and #29 in <code>order-triage-agent</code>, both reverted.</em></p></body></html>

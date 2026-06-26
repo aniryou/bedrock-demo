@@ -1,0 +1,148 @@
+name: Deploy to AgentCore (Terraform)
+
+# The MAIN terraform apply against the live remote state. Assumes infra/bootstrap is
+# applied and the agent + stubs have published their artifacts (image -> ECR,
+# zips/openapi/kb -> S3).
+#
+# Triggers:
+#   repository_dispatch  - a producer published (agent-image-published / stubs-published),
+#                          dispatched in-repo by agent-build.yml / stubs-release.yml
+#   workflow_dispatch    - manual
+#
+# GATED: a human must approve (manual-approval action) BEFORE any AWS credentials are
+# configured. The approval step runs first and only has the default GITHUB_TOKEN, so
+# it never sees the deploy role. Approver list lives in infra/docs/playbooks/cd-setup.md / the step below.
+#
+# Auth via GitHub OIDC. Requires (see infra/docs/playbooks/cd-setup.md):
+#   secrets: AWS_DEPLOY_ROLE_ARN, ARTIFACTS_BUCKET, AGENT_IMAGE_URI (fallback image),
+#            SNOWFLAKE_API_KEY
+#   vars (production env): ENTRA_TENANT_ID, ENTRA_AGENT_APP_ID, ENTRA_OBO_SCOPE
+#   vars:    AWS_REGION (optional; us-west-2), NAME_PREFIX (optional; order-triage),
+#            DEPLOY_APPROVERS (optional; comma-separated GitHub logins, default 'aniryou')
+# Runs infra.preflight (a read-only deploy-role access check) before the apply.
+
+on:
+  repository_dispatch:
+    types: [agent-image-published, stubs-published]
+  workflow_dispatch:
+    inputs:
+      region:
+        description: AWS region
+        default: us-west-2
+
+concurrency:
+  group: deploy-infra
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write # manual-approval opens/closes an approval issue
+
+defaults:
+  run:
+    working-directory: infra
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # GitHub-native required-reviewer gate. Also mints the OIDC `sub` claim
+    # repo:aniryou/bedrock-demo:environment:production that the deploy role
+    # trusts (infra/bootstrap/github_oidc.tf — update the trusted repo to
+    # aniryou/bedrock-demo). Configure required reviewers on this environment
+    # in repo Settings → Environments.
+    environment: production
+    env:
+      AWS_REGION: ${{ github.event.inputs.region || vars.AWS_REGION || 'us-west-2' }}
+      NAME_PREFIX: ${{ vars.NAME_PREFIX || 'order-triage' }}
+      TF_VAR_region: ${{ github.event.inputs.region || vars.AWS_REGION || 'us-west-2' }}
+      TF_VAR_agent_image_uri: ${{ github.event.client_payload.image_uri || secrets.AGENT_IMAGE_URI }}
+      TF_VAR_artifacts_bucket: ${{ secrets.ARTIFACTS_BUCKET }}
+      TF_VAR_snowflake_api_key: ${{ secrets.SNOWFLAKE_API_KEY }}
+      # Entra OBO — REQUIRED by terraform (no defaults) since the gateway-only migration;
+      # the apply fails "No value for required variable" without them. Non-sensitive
+      # config (tenant/app ids, scope — the client SECRET lives in Secrets Manager), so
+      # these are `production` ENVIRONMENT variables (the job sets environment: production).
+      TF_VAR_entra_tenant_id: ${{ vars.ENTRA_TENANT_ID }}
+      TF_VAR_entra_agent_app_id: ${{ vars.ENTRA_AGENT_APP_ID }}
+      TF_VAR_entra_obo_scope: ${{ vars.ENTRA_OBO_SCOPE }}
+      # Keep online Evaluations + alert-email in sync with local `make deploy` (which sets
+      # these from .env). Without them a CI apply defaults evals off / email empty and TEARS
+      # DOWN the eval config, exec role, and SNS subscription. Set as `production` environment
+      # variables; default off / empty when unset.
+      TF_VAR_enable_online_evaluations: ${{ vars.ENABLE_ONLINE_EVALUATIONS || 'false' }}
+      TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
+      # Dashboard actor resolution (ADR-0007) — same sync rule as the eval vars above. Without
+      # them a CI apply defaults resolution off (the var default is false) and TEARS DOWN the
+      # actor-resolver Lambda, role, Graph-secret data source, and oid contributor rule that
+      # `make deploy` stood up. Set as `production` environment variables; the secret name is the
+      # Secrets Manager secret seeded by `make seed-graph-secret`. Default off / empty when unset.
+      TF_VAR_enable_actor_resolution: ${{ vars.ENABLE_ACTOR_RESOLUTION || 'false' }}
+      TF_VAR_graph_resolver_secret_name: ${{ vars.GRAPH_RESOLVER_SECRET_NAME }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # ---- Human gate: blocks here until an approver comments "approved". ----
+      # Runs BEFORE AWS creds are configured, so it cannot touch the deploy role.
+      # Pinned to v1.12.0 (trstringer/manual-approval, MIT).
+      - name: Await deploy approval
+        uses: trstringer/manual-approval@74d99dff7380e3e4b122d4ededcbca2b6ce59367
+        timeout-minutes: 1440 # auto-fail (no deploy) if not approved within 24h
+        with:
+          secret: ${{ github.token }}
+          approvers: ${{ vars.DEPLOY_APPROVERS || 'aniryou' }}
+          minimum-approvals: 1
+          issue-title: "Approve AgentCore deploy (${{ github.event.action || github.event_name }})"
+          issue-body: >
+            Trigger: ${{ github.event.action || github.event_name }} from
+            ${{ github.event.client_payload.source || github.actor }}.
+            Image: ${{ github.event.client_payload.image_uri || secrets.AGENT_IMAGE_URI }}.
+            Comment "approved" to run `terraform apply`, or "denied" to cancel.
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: false
+      - uses: hashicorp/setup-terraform@v4
+
+      - run: uv sync
+      - name: Preflight (read-only access check)
+        run: uv run python -m infra.preflight
+
+      # Account-scoped remote-state bucket name, derived exactly as the
+      # orchestrator's lib.sh does (NAME_PREFIX + account id). Without
+      # -backend-config the s3 backend block is incomplete and init would never
+      # reach the live state. Locking is S3-native (use_lockfile in versions.tf).
+      - name: Resolve remote-state backend
+        run: |
+          ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+          echo "TFSTATE_BUCKET=${NAME_PREFIX}-tfstate-${ACCOUNT_ID}" >> "$GITHUB_ENV"
+
+      # The Snowflake OBO egress (terraform_data.snowflake_obo_egress) shells out to
+      # `aws bedrock-agentcore-control update-gateway-target ... grantType=TOKEN_EXCHANGE`
+      # during apply, which needs AWS CLI v2 >= 2.35.9. Pin to the latest v2 so a stale
+      # runner image can't fail the apply at that local-exec. (No-op if already current.)
+      - name: Ensure latest AWS CLI v2
+        run: |
+          curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+          unzip -q -o /tmp/awscliv2.zip -d /tmp
+          sudo /tmp/aws/install --update
+          aws --version
+
+      # P4.4 deploy marker: stamp the actual deploy time so the dashboards mark this
+      # release (vertical annotation + "Current release" line). No "now" exists in GH
+      # expressions, so set it here for the apply step to pick up as TF_VAR_deploy_marker_ts.
+      - name: Deploy marker timestamp
+        run: echo "TF_VAR_deploy_marker_ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Terraform apply (main)
+        run: |
+          terraform -chdir=terraform init -input=false -reconfigure \
+            -backend-config="bucket=$TFSTATE_BUCKET" \
+            -backend-config="region=$AWS_REGION"
+          terraform -chdir=terraform apply -auto-approve -input=false

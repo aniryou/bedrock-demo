@@ -1,0 +1,77 @@
+# ═════════════════════════════════════════════════════════════════════════
+# RELATIONSHIPS (link types)
+# Endpoints reference object types by apiName. cardinality and direction follow
+# the diagram's multiplicities. kind: association (--) | dependency (..>).
+# ═════════════════════════════════════════════════════════════════════════
+
+linkTypes:
+  # ---- Commercial ----
+  - { apiName: groupContainsCustomers,       displayName: "groups",                kind: association, cardinality: one_to_many,  from: { objectType: CustomerGroup }, to: { objectType: Customer } }
+  - { apiName: customerHasCredit,            displayName: "has credit",            kind: association, cardinality: one_to_one,   from: { objectType: Customer },      to: { objectType: CreditProfile } }
+  - { apiName: customerHasProfile,           displayName: "profiled by",           kind: association, cardinality: one_to_one,   from: { objectType: Customer },      to: { objectType: CustomerProfile } }
+  - { apiName: customerSignsContract,        displayName: "signs",                 kind: association, cardinality: one_to_many,  from: { objectType: Customer },      to: { objectType: Contract } }
+  - { apiName: groupSignsContract,           displayName: "signs (group level)",   kind: association, cardinality: one_to_many,  from: { objectType: CustomerGroup }, to: { objectType: Contract } }
+  - { apiName: customerShipsTo,              displayName: "ships to",              kind: association, cardinality: one_to_many,  from: { objectType: Customer },      to: { objectType: ShipTo } }
+  - { apiName: contractReleasedByCalloff,    displayName: "released by",           kind: association, cardinality: one_to_many,  from: { objectType: Contract },      to: { objectType: CallOff } }
+  - { apiName: poEvidencesCalloff,           displayName: "evidences",             kind: association, cardinality: one_to_one,   from: { objectType: PurchaseOrder }, to: { objectType: CallOff } }
+  - { apiName: poFansToSalesOrders,          displayName: "fans out to (per ship-to)", kind: association, cardinality: one_to_many, from: { objectType: PurchaseOrder }, to: { objectType: SalesOrder } }
+  - { apiName: calloffCreatesSalesOrders,    displayName: "creates",               kind: association, cardinality: one_to_many,  from: { objectType: CallOff },       to: { objectType: SalesOrder } }
+  - { apiName: salesOrderConvertsToDelivery, displayName: "converts to",           kind: association, cardinality: one_to_many,  from: { objectType: SalesOrder },    to: { objectType: DeliveryOrder } }
+  - { apiName: salesOrderAllocatedFromStock, displayName: "allocated from",        kind: association, cardinality: many_to_many, from: { objectType: SalesOrder },    to: { objectType: StockPosition } }
+  - { apiName: salesOrderPrioritisedByProfile, displayName: "prioritised by",      kind: dependency,  cardinality: many_to_one,  from: { objectType: SalesOrder },    to: { objectType: CustomerProfile } }
+  - { apiName: deliveryLoadedIntoShipment,   displayName: "loaded into",           kind: association, cardinality: many_to_one,  from: { objectType: DeliveryOrder }, to: { objectType: Shipment } }
+  - { apiName: deliveryInvoicedBy,           displayName: "invoiced by",           kind: association, cardinality: one_to_one,   from: { objectType: DeliveryOrder }, to: { objectType: Invoice } }
+  - { apiName: deliveryDocumentedBy,         displayName: "documented by",         kind: association, cardinality: one_to_one,   from: { objectType: DeliveryOrder }, to: { objectType: DocumentDocket } }
+  - { apiName: shipmentCarriesStock,         displayName: "carries in-transit",    kind: association, cardinality: one_to_many,  from: { objectType: Shipment },      to: { objectType: StockPosition } }
+
+  # ---- Stock & quality ----
+  - { apiName: productStockedAs,             displayName: "stocked as",            kind: association, cardinality: one_to_many,  from: { objectType: Product },       to: { objectType: StockPosition } }
+  - { apiName: productReworkedInto,          displayName: "reworked into (slow -> fast)", kind: association, cardinality: many_to_many, from: { objectType: Product }, to: { objectType: Product } }
+  - { apiName: stockGatedByQuality,          displayName: "gated by",              kind: association, cardinality: one_to_one,   from: { objectType: StockPosition }, to: { objectType: QualityClearance } }
+  - { apiName: stockHeldAtPlant,             displayName: "held at",               kind: association, cardinality: many_to_one,  from: { objectType: StockPosition }, to: { objectType: Plant } }
+  - { apiName: stockHeldAtWarehouse,         displayName: "held at",               kind: association, cardinality: many_to_one,  from: { objectType: StockPosition }, to: { objectType: Warehouse } }
+  - { apiName: stockSurfacesAsFts,           displayName: "surfaces as (contract-less)", kind: association, cardinality: one_to_many, from: { objectType: StockPosition }, to: { objectType: FtsOpportunity } }
+
+  # ---- Comms, exceptions, disputes ----
+  - { apiName: notificationSentToCustomer,   displayName: "sent to",               kind: association, cardinality: many_to_one,  from: { objectType: CustomerNotification }, to: { objectType: Customer } }
+  - { apiName: notificationEscalatesTo,      displayName: "escalates (unanswered x2)", kind: association, cardinality: many_to_one, from: { objectType: CustomerNotification }, to: { objectType: Escalation } }
+  - { apiName: deliveryRaisesDispute,        displayName: "disputes",              kind: association, cardinality: one_to_many,  from: { objectType: DeliveryOrder }, to: { objectType: Dispute } }
+  - { apiName: shipmentRaisesDispute,        displayName: "disputes",              kind: association, cardinality: one_to_many,  from: { objectType: Shipment },      to: { objectType: Dispute } }
+  - { apiName: calloffRaisesCarryDispute,    displayName: "claims carry cost (cancelled)", kind: association, cardinality: one_to_many, from: { objectType: CallOff }, to: { objectType: Dispute } }
+  - { apiName: poRaisesException,            displayName: "mismatch raises",       kind: association, cardinality: one_to_many,  from: { objectType: PurchaseOrder }, to: { objectType: Exception } }
+
+  # ---- Planning & production ----
+  - { apiName: demandConstrainsProduction,   displayName: "constrains",            kind: association, cardinality: one_to_many,  from: { objectType: DemandPlan },    to: { objectType: ProductionPlan } }
+  - { apiName: demandNetsContracts,          displayName: "nets contract book",    kind: dependency,  cardinality: many_to_many, from: { objectType: DemandPlan },    to: { objectType: Contract } }
+  - { apiName: productionReleasesProcessOrders, displayName: "releases",           kind: association, cardinality: one_to_many,  from: { objectType: ProductionPlan },to: { objectType: ProcessOrder } }
+  - { apiName: productionScheduledAtPlant,   displayName: "scheduled at",          kind: association, cardinality: many_to_one,  from: { objectType: ProductionPlan },to: { objectType: Plant } }
+  - { apiName: processOrderRunsOnLine,       displayName: "runs on",               kind: association, cardinality: many_to_one,  from: { objectType: ProcessOrder },  to: { objectType: ProductionLine } }
+  - { apiName: linePartOfPlant,              displayName: "part of",               kind: association, cardinality: many_to_one,  from: { objectType: ProductionLine },to: { objectType: Plant } }
+  - { apiName: processOrderRunsRecipe,       displayName: "runs",                  kind: association, cardinality: many_to_one,  from: { objectType: ProcessOrder },  to: { objectType: Recipe } }
+  - { apiName: recipeComposedOfComponents,   displayName: "composed of",           kind: association, cardinality: one_to_many,  from: { objectType: Recipe },        to: { objectType: BlendComponent } }
+  - { apiName: componentDrawsFromStock,      displayName: "draws from (incl. rework)", kind: association, cardinality: many_to_many, from: { objectType: BlendComponent }, to: { objectType: StockPosition } }
+  - { apiName: recipeYieldsProduct,          displayName: "yields",                kind: association, cardinality: one_to_many,  from: { objectType: Recipe },        to: { objectType: Product } }
+  - { apiName: recipeYieldPredicted,         displayName: "yield predicted as",    kind: association, cardinality: one_to_many,  from: { objectType: Recipe },        to: { objectType: YieldRecord } }
+  - { apiName: processOrderActualisesYield,  displayName: "actualises",            kind: dependency,  cardinality: many_to_one,  from: { objectType: ProcessOrder },  to: { objectType: YieldRecord } }
+
+  # ---- Procurement (A) ----
+  - { apiName: originSuppliesLots,           displayName: "supplies",              kind: association, cardinality: one_to_many,  from: { objectType: Origin },        to: { objectType: BeanLot } }
+  - { apiName: supplierTendersOffers,        displayName: "tenders",               kind: association, cardinality: one_to_many,  from: { objectType: Supplier },      to: { objectType: Offer } }
+  - { apiName: offerFromOrigin,              displayName: "from",                  kind: association, cardinality: many_to_one,  from: { objectType: Offer },         to: { objectType: Origin } }
+  - { apiName: offerPricedAgainstBasis,      displayName: "priced against",        kind: dependency,  cardinality: many_to_one,  from: { objectType: Offer },         to: { objectType: BasisCurve } }
+  - { apiName: offerAcceptedIntoContract,    displayName: "accepted into",         kind: association, cardinality: one_to_one,   from: { objectType: Offer },         to: { objectType: BeanPurchaseContract } }
+  - { apiName: cropViewInformsProcurement,   displayName: "informs",               kind: dependency,  cardinality: many_to_many, from: { objectType: CropSdView },    to: { objectType: ProcurementPlan } }
+  - { apiName: demandTranslatesToRequirement,displayName: "translates to",         kind: association, cardinality: one_to_many,  from: { objectType: DemandPlan },    to: { objectType: DemandToBeanRequirement } }
+  - { apiName: requirementViaRecipe,         displayName: "via recipe linkage",    kind: association, cardinality: many_to_one,  from: { objectType: DemandToBeanRequirement }, to: { objectType: Recipe } }
+  - { apiName: requirementDrivesProcurement, displayName: "drives",                kind: association, cardinality: many_to_one,  from: { objectType: DemandToBeanRequirement }, to: { objectType: ProcurementPlan } }
+  - { apiName: procurementWorksWithinBasis,  displayName: "works within stance",   kind: dependency,  cardinality: many_to_many, from: { objectType: ProcurementPlan }, to: { objectType: BasisCurve } }
+  - { apiName: procurementConstrainedByCover,displayName: "constrained by",        kind: association, cardinality: one_to_many,  from: { objectType: ProcurementPlan }, to: { objectType: CoverPolicy } }
+  - { apiName: coverPerPlant,                displayName: "per factory",           kind: association, cardinality: many_to_one,  from: { objectType: CoverPolicy },   to: { objectType: Plant } }
+  - { apiName: coverPerOrigin,               displayName: "per origin",            kind: association, cardinality: many_to_one,  from: { objectType: CoverPolicy },   to: { objectType: Origin } }
+  - { apiName: procurementExecutesAsContracts, displayName: "executes as",         kind: association, cardinality: one_to_many,  from: { objectType: ProcurementPlan }, to: { objectType: BeanPurchaseContract } }
+  - { apiName: contractDeliversLots,         displayName: "delivers",              kind: association, cardinality: one_to_many,  from: { objectType: BeanPurchaseContract }, to: { objectType: BeanLot } }
+  - { apiName: lotLandsAsStock,              displayName: "lands as",              kind: association, cardinality: one_to_many,  from: { objectType: BeanLot },       to: { objectType: StockPosition } }
+  - { apiName: lotRaisesLandedDispute,       displayName: "claims (landed vs contracted)", kind: association, cardinality: one_to_many, from: { objectType: BeanLot }, to: { objectType: Dispute } }
+  - { apiName: scenarioEvaluatesProcurement, displayName: "evaluates",             kind: association, cardinality: many_to_one,  from: { objectType: OptimizerScenario }, to: { objectType: ProcurementPlan } }
+  - { apiName: decisionConsidersScenarios,   displayName: "considers",             kind: association, cardinality: one_to_many,  from: { objectType: DecisionRecord }, to: { objectType: OptimizerScenario } }
+  - { apiName: decisionApprovesProcurement,  displayName: "approves",              kind: association, cardinality: one_to_one,   from: { objectType: DecisionRecord }, to: { objectType: ProcurementPlan } }

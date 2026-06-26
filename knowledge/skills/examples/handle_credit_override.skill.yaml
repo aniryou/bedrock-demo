@@ -1,0 +1,19 @@
+# A skill: a curated, versioned procedure. It references the ontology by apiName.
+# `appliesTo` is the structural trigger (the agent surfaces this skill when it is
+# about to act on these entities / links / actions). `invokes` and `reads` are its
+# mutation and read footprint. build/bindings.py resolves every reference.
+apiName: handle_credit_override
+displayName: "Handle credit override"
+version: 3
+description: >
+  How to weigh a borderline credit-override request: what to verify and in what
+  order before approving above the limit or after a recent default, and when to
+  route to committee instead.
+appliesTo:
+  objectTypes: [CreditProfile, CustomerProfile]
+  linkTypes:   [customerHasCredit]
+  actions:     [approveCreditLimit]
+invokes:       [approveCreditLimit, raiseException]
+reads:
+  objectTypes: [CreditProfile, CustomerProfile, Exception]
+  datasources: [pluto]

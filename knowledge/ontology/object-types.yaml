@@ -1,0 +1,559 @@
+# ═════════════════════════════════════════════════════════════════════════
+# ENTITIES (object types) — work-streams A / B / C
+# workstream: A bean sourcing & procurement · B planning, blend & inventory ·
+#             C sales, contracting & fulfilment
+# `backing` is set where the diagram named a source of truth; omitted where the
+# source is not yet defined. `column` mappings are pending for informal sources.
+# ═════════════════════════════════════════════════════════════════════════
+
+objectTypes:
+
+  # ---- Order intake & commercial (C) -------------------------------------
+  - apiName: CustomerGroup
+    displayName: "Customer group"
+    workstream: C
+    group: "Order intake & commercial"
+    primaryKey: groupId
+    properties:
+      - { apiName: groupId, type: string }
+
+  - apiName: Customer
+    displayName: "Customer"
+    workstream: C
+    group: "Order intake & commercial"
+    primaryKey: customerId
+    aliases: [account, buyer, client]
+    properties:
+      - { apiName: customerId, type: string }
+      - { apiName: region,     type: string }
+
+  - apiName: CustomerProfile
+    displayName: "Customer profile"
+    workstream: C
+    group: "Order intake & commercial"
+    primaryKey: customerId
+    properties:
+      - { apiName: customerId,               type: string }
+      - { apiName: tier,                     type: string, enum: [strategic, large] }
+      - { apiName: allocationPriorityInputs, type: string }
+      - { apiName: costToServe,              type: double }
+
+  - apiName: CreditProfile
+    displayName: "Credit profile"
+    workstream: C
+    group: "Order intake & commercial"
+    primaryKey: customerId
+    classification: confidential
+    aliases: [credit limit, credit exposure, payment terms, AR risk]
+    properties:
+      - { apiName: customerId,         type: string }
+      - { apiName: limit,              type: double }
+      - { apiName: terms,              type: string }
+      - { apiName: exposure,           type: double }
+      - { apiName: latePaymentHistory, type: string }
+
+  - apiName: ShipTo
+    displayName: "Customer plant (ship-to)"
+    workstream: C
+    group: "Order intake & commercial"
+    primaryKey: shipToId
+    properties:
+      - { apiName: shipToId, type: string }
+
+  - apiName: Contract
+    displayName: "Contract"
+    workstream: C
+    group: "Order intake & commercial"
+    primaryKey: contractId
+    backing: { datasource: pluto }
+    properties:
+      - { apiName: contractId,     type: string }
+      - { apiName: contractType,   type: string, enum: [forward, spot] }
+      - { apiName: level,          type: string, enum: [customer, customer_group] }
+      - { apiName: tenderedVolume, type: double }
+      - { apiName: validity,       type: string }
+      - { apiName: price,          type: double }
+      - { apiName: incoterms,      type: string }
+      - { apiName: draggingFlag,   type: boolean }
+      - { apiName: syncStatus,     type: string, description: "SAP <-> Pluto sync status" }
+
+  - apiName: CallOff
+    displayName: "Call-off"
+    workstream: C
+    group: "Order intake & commercial"
+    primaryKey: [contractId, period]
+    properties:
+      - { apiName: contractId,      type: string }
+      - { apiName: period,          type: string }
+      - { apiName: requestedVolume, type: double }
+      - { apiName: dateReceived,    type: date }
+
+  - apiName: PurchaseOrder
+    displayName: "Purchase order (inbound)"
+    workstream: C
+    group: "Order intake & commercial"
+    primaryKey: [customerId, customerPoNumber]
+    backing: { datasource: customer_email }
+    properties:
+      - { apiName: customerId,             type: string }
+      - { apiName: customerPoNumber,       type: string }
+      - { apiName: requestedShipTos,       type: array,  description: "may span several ship-tos" }
+      - { apiName: requestedQty,           type: double }
+      - { apiName: requestedPrice,         type: double }
+      - { apiName: requestedIncoterms,     type: string }
+      - { apiName: packagingInstructions,  type: string }
+      - { apiName: matchStatus,            type: string }
+
+  - apiName: SalesOrder
+    displayName: "Sales order"
+    workstream: C
+    group: "Order intake & commercial"
+    primaryKey: soNumber
+    classification: confidential   # order/customer commercial data is sensitive → reads run on-behalf-of the user
+    backing: { datasource: sap }
+    properties:
+      - { apiName: soNumber,         type: string }
+      - { apiName: status,           type: string }
+      - { apiName: dynamicReference, type: string, description: "pre-SAP marketplace reference" }
+      - { apiName: creationMode,     type: string, enum: [touchless, manual] }
+
+  - apiName: DeliveryOrder
+    displayName: "Delivery order (OBD)"
+    workstream: C
+    group: "Order intake & commercial"
+    primaryKey: doNumber
+    backing: { datasource: sap }
+    properties:
+      - { apiName: doNumber,        type: string }
+      - { apiName: creditStatus,    type: string }
+      - { apiName: creationTrigger, type: string, description: "lead time + stock" }
+      - { apiName: regionalRule,    type: string, description: "US: stock must exist" }
+
+  # ---- Demand & production planning (B) ----------------------------------
+  - apiName: DemandPlan
+    displayName: "Demand plan"
+    workstream: B
+    group: "Demand & production planning"
+    primaryKey: [region, horizonPeriod, version]
+    properties:
+      - { apiName: region,                 type: string }
+      - { apiName: horizonPeriod,          type: string }
+      - { apiName: version,                type: string }
+      - { apiName: unconstrainedForecast,  type: double }
+      - { apiName: netsOff,                type: string, description: "contracts | sales orders | FTS" }
+      - { apiName: triangulationInputs,    type: string, description: "history | budget | market" }
+      - { apiName: salesValidationStatus,  type: string }
+
+  - apiName: ProductionPlan
+    displayName: "Production plan"
+    workstream: B
+    group: "Demand & production planning"
+    primaryKey: [site, period]
+    backing: { datasource: sop_excel }
+    properties:
+      - { apiName: site,                type: string }
+      - { apiName: period,              type: string, description: "weekly buckets, M+2" }
+      - { apiName: frozenHorizon,       type: string, description: "1-2 weeks, plant-set" }
+      - { apiName: prescribedSequence,  type: string }
+      - { apiName: powderButterBalance, type: string }
+      - { apiName: priority,            type: string, description: "SOs > contracts > fast-movers" }
+
+  - apiName: ProcessOrder
+    displayName: "Process order"
+    workstream: B
+    group: "Demand & production planning"
+    primaryKey: processOrderNo
+    backing: { datasource: sap }
+    properties:
+      - { apiName: processOrderNo, type: string }
+      - { apiName: quantities,     type: double }
+      - { apiName: status,         type: string }
+      - { apiName: creationMode,   type: string, description: "manual weekly today" }
+
+  - apiName: ProductionLine
+    displayName: "Production line"
+    workstream: B
+    group: "Demand & production planning"
+    primaryKey: [plant, lineId]
+    properties:
+      - { apiName: plant,       type: string }
+      - { apiName: lineId,      type: string }
+      - { apiName: runCapacity, type: string, description: "experience throughput per SKU" }
+      - { apiName: downtime,    type: string, description: "PM plan + unplanned baseline %" }
+      - { apiName: constraints, type: array,  description: "silo | bean ops | packaging" }
+
+  - apiName: Recipe
+    displayName: "Recipe"
+    workstream: B
+    group: "Demand & production planning"
+    primaryKey: [productSpec, blendId]
+    backing: { datasource: recipe_generator_brs }
+    properties:
+      - { apiName: productSpec,        type: string }
+      - { apiName: blendId,            type: string }
+      - { apiName: presetComponents,   type: string, description: "pre-approved | min %" }
+      - { apiName: fillerShare,        type: double }
+      - { apiName: qualityConstraints, type: array,  description: "cadmium | polyphenol | segregation" }
+      - { apiName: rankingScore,       type: double, description: "virtual cost" }
+
+  - apiName: BlendComponent
+    displayName: "Blend component"
+    workstream: B
+    group: "Demand & production planning"
+    primaryKey: [blendId, component]
+    properties:
+      - { apiName: blendId,          type: string }
+      - { apiName: component,        type: string }
+      - { apiName: source,           type: string, enum: [origin_bean, cake, rework, external] }
+      - { apiName: proportionMinPct, type: double }
+      - { apiName: proportionMaxPct, type: double }
+      - { apiName: qualityParameters,type: array }
+
+  - apiName: YieldRecord
+    displayName: "Yield record"
+    workstream: B
+    group: "Demand & production planning"
+    primaryKey: [recipe, plant, period]
+    backing: { datasource: manual_yield }
+    properties:
+      - { apiName: recipe,           type: string }
+      - { apiName: plant,            type: string }
+      - { apiName: period,           type: string }
+      - { apiName: predictedYield,   type: double }
+      - { apiName: actualYield,      type: double }
+      - { apiName: varianceDrivers,  type: array,  description: "FFA | moisture | fat | shell" }
+      - { apiName: machineWearFactor,type: double }
+
+  # ---- Stock & quality (B) -----------------------------------------------
+  - apiName: Product
+    displayName: "Product (SKU)"
+    workstream: B
+    group: "Stock & quality"
+    primaryKey: sku
+    titleProperty: sku
+    backing: { datasource: master_data }
+    properties:
+      - { apiName: sku,                  type: string }
+      - { apiName: family,               type: string }
+      - { apiName: form,                 type: string }
+      - { apiName: customerSpecificFlag, type: boolean }
+      - { apiName: velocityClass,        type: string, enum: [slow, fast] }
+
+  - apiName: StockPosition
+    displayName: "Stock position"
+    workstream: B
+    group: "Stock & quality"
+    primaryKey: [sku, location, state]
+    backing: { datasource: sap_stock }
+    aliases: [inventory, on-hand stock, stock on hand]
+    properties:
+      - { apiName: sku,          type: string }
+      - { apiName: location,     type: string }
+      - { apiName: state,        type: string, enum: [quality_hold, unrestricted, allocated, fts, rework, blocked] }
+      - { apiName: quantity,     type: double }
+      - { apiName: age,          type: integer }
+      - { apiName: value,        type: double }
+      - { apiName: locationState,type: string, description: "in-transit (intercompany)" }
+
+  - apiName: FtsOpportunity
+    displayName: "FTS opportunity"
+    workstream: B
+    group: "Stock & quality"
+    primaryKey: [sku, location, week]
+    backing: { datasource: derived_weekly }
+    properties:
+      - { apiName: sku,               type: string }
+      - { apiName: location,          type: string }
+      - { apiName: week,              type: string }
+      - { apiName: holdingCost,       type: double }
+      - { apiName: liquidationCost,   type: double }
+      - { apiName: recommendedAvenue, type: string }
+
+  - apiName: QualityClearance
+    displayName: "Quality clearance"
+    workstream: B
+    group: "Stock & quality"
+    primaryKey: [batch, sku]
+    properties:
+      - { apiName: batch,                type: string }
+      - { apiName: sku,                  type: string }
+      - { apiName: stdLeadTimeDays,      type: integer, default: 7 }
+      - { apiName: customerSpecificTests,type: array }
+      - { apiName: releaseStatus,        type: string }
+
+  - apiName: Plant
+    displayName: "Plant"
+    workstream: B
+    group: "Stock & quality"
+    primaryKey: siteCode
+    properties:
+      - { apiName: siteCode, type: string }
+      - { apiName: region,   type: string }
+
+  - apiName: Warehouse
+    displayName: "Warehouse"
+    workstream: B
+    group: "Stock & quality"
+    primaryKey: warehouseCode
+    properties:
+      - { apiName: warehouseCode, type: string }
+      - { apiName: thirdParty,    type: boolean }
+      - { apiName: ediConnected,  type: boolean, description: "US 3P: no" }
+
+  # ---- Logistics & documents (C) -----------------------------------------
+  - apiName: Shipment
+    displayName: "Shipment"
+    workstream: C
+    group: "Logistics & documents"
+    primaryKey: shipmentId
+    backing: { datasource: project44 }
+    properties:
+      - { apiName: shipmentId,              type: string }
+      - { apiName: mode,                    type: string, enum: [ocean, road] }
+      - { apiName: eta,                     type: timestamp }
+      - { apiName: predictedDeliveryWindow, type: string }
+
+  - apiName: DocumentDocket
+    displayName: "Document docket"
+    workstream: C
+    group: "Logistics & documents"
+    primaryKey: [deliveryOrder, docketId]
+    properties:
+      - { apiName: deliveryOrder,            type: string }
+      - { apiName: docketId,                 type: string }
+      - { apiName: requiredDocumentSet,      type: array }
+      - { apiName: sentDate,                 type: date }
+      - { apiName: completeByMaterialReceipt,type: boolean }
+
+  - apiName: Invoice
+    displayName: "Invoice"
+    workstream: C
+    group: "Logistics & documents"
+    primaryKey: invoiceNumber
+    properties:
+      - { apiName: invoiceNumber,  type: string }
+      - { apiName: amount,         type: double }
+      - { apiName: status,         type: string }
+      - { apiName: cycleTimeStamps,type: string, description: "1 day ~ $2M working capital" }
+
+  # ---- Commercial health & comms (C) -------------------------------------
+  - apiName: Exception
+    displayName: "Exception"
+    workstream: C
+    group: "Commercial health & comms"
+    primaryKey: exceptionId
+    backing: { datasource: infinity_order_portal }
+    aliases: [order exception, mismatch, order hold]
+    properties:
+      - { apiName: exceptionId,     type: string }
+      - { apiName: type,            type: string, enum: [price, qty, contract_fit, credit, other] }
+      - { apiName: routedToOwner,   type: string }
+      - { apiName: resolutionState, type: string, description: "feeds learning loop" }
+
+  - apiName: CustomerNotification
+    displayName: "Customer notification"
+    workstream: C
+    group: "Commercial health & comms"
+    primaryKey: notificationId
+    backing: { datasource: notification_channels }
+    properties:
+      - { apiName: notificationId, type: string }
+      - { apiName: type,           type: string, enum: [ack, confirm, delay, early_offer, dragging_reminder, docket] }
+      - { apiName: attemptCount,   type: integer }
+      - { apiName: response,       type: string }
+
+  - apiName: Escalation
+    displayName: "Escalation"
+    workstream: C
+    group: "Commercial health & comms"
+    primaryKey: escalationId
+    properties:
+      - { apiName: escalationId,     type: string }
+      - { apiName: escalationPath,   type: string, description: "internal then customer" }
+      - { apiName: responsibleParty, type: string }
+
+  - apiName: Dispute
+    displayName: "Dispute / claim"
+    workstream: C
+    group: "Commercial health & comms"
+    primaryKey: disputeId
+    properties:
+      - { apiName: disputeId,      type: string }
+      - { apiName: direction,      type: string, enum: [customer, carry_cost, supplier_quality] }
+      - { apiName: theme,          type: string }
+      - { apiName: resolutionCost, type: double, description: "ours + theirs" }
+
+  # ---- Bean sourcing & procurement (A) -----------------------------------
+  - apiName: Origin
+    displayName: "Origin"
+    workstream: A
+    group: "Bean sourcing & procurement"
+    primaryKey: originCode
+    properties:
+      - { apiName: originCode,       type: string }
+      - { apiName: region,           type: string }
+      - { apiName: cropCalendar,     type: string }
+      - { apiName: executionChannel, type: string, enum: [cdi_auction, cocobod, upcountry, grade_system, exporters] }
+
+  - apiName: Supplier
+    displayName: "Supplier"
+    workstream: A
+    group: "Bean sourcing & procurement"
+    primaryKey: supplierId
+    properties:
+      - { apiName: supplierId,            type: string }
+      - { apiName: executionReliability,  type: string }
+      - { apiName: qualityConsistency,    type: string }
+      - { apiName: segregationDiscipline, type: string }
+      - { apiName: defaultRisk,           type: string }
+      - { apiName: claimsHistory,         type: string, description: "last 12 months" }
+      - { apiName: strategicValue,        type: string }
+
+  - apiName: Offer
+    displayName: "Offer"
+    workstream: A
+    group: "Bean sourcing & procurement"
+    primaryKey: offerId
+    backing: { datasource: offer_intake }
+    properties:
+      - { apiName: offerId,              type: string }
+      - { apiName: grade,                type: string }
+      - { apiName: volume,               type: double }
+      - { apiName: differential,         type: double }
+      - { apiName: deliveryBasis,        type: string, enum: [farmgate, fob, cif, sif] }
+      - { apiName: dealStructure,        type: string, enum: [outright, ptbf, pre_financed] }
+      - { apiName: validity,             type: string }
+      - { apiName: deliveredFactoryCost, type: double, description: "normalised" }
+
+  - apiName: BasisCurve
+    displayName: "Basis curve"
+    workstream: A
+    group: "Bean sourcing & procurement"
+    primaryKey: [origin, cropYear, grade, deliveryMonth]
+    backing: { datasource: trading_desk }
+    properties:
+      - { apiName: origin,           type: string }
+      - { apiName: cropYear,         type: string }
+      - { apiName: grade,            type: string }
+      - { apiName: deliveryMonth,    type: string }
+      - { apiName: differential,     type: double }
+      - { apiName: capacityToCommit, type: double }
+      - { apiName: stance,           type: string, enum: [push, hold, pull, block] }
+
+  - apiName: CropSdView
+    displayName: "Crop & S&D view"
+    workstream: A
+    group: "Bean sourcing & procurement"
+    primaryKey: [origin, cropPhase, version]
+    backing: { datasource: research_docs }
+    properties:
+      - { apiName: origin,             type: string }
+      - { apiName: cropPhase,          type: string }
+      - { apiName: version,            type: string }
+      - { apiName: supplyOutlook,      type: string, description: "with confidence bands" }
+      - { apiName: stockToGrindSignal, type: string }
+      - { apiName: shockScenarios,     type: array }
+
+  - apiName: DemandToBeanRequirement
+    displayName: "Demand-to-bean requirement"
+    workstream: A
+    group: "Bean sourcing & procurement"
+    primaryKey: requirementId
+    backing: { datasource: dpm_brs_connector }
+    properties:
+      - { apiName: requirementId,             type: string }
+      - { apiName: volume,                    type: double }
+      - { apiName: origin,                    type: string }
+      - { apiName: cropYear,                  type: string }
+      - { apiName: grade,                     type: string }
+      - { apiName: qualityAttributes,         type: array }
+      - { apiName: timing,                    type: string }
+      - { apiName: sustainabilityInheritance, type: string, description: "via recipe" }
+
+  - apiName: ProcurementPlan
+    displayName: "Procurement plan"
+    workstream: A
+    group: "Bean sourcing & procurement"
+    primaryKey: [region, season, version]
+    properties:
+      - { apiName: region,              type: string }
+      - { apiName: season,              type: string }
+      - { apiName: version,             type: string }
+      - { apiName: commitmentLadder,    type: string, description: "buckets x origins x triggers" }
+      - { apiName: dealStructureChoices,type: array }
+      - { apiName: expectedPbt,         type: double }
+      - { apiName: workingCapitalPath,  type: string }
+      - { apiName: coverPath,           type: string }
+      - { apiName: approvalState,       type: string }
+
+  - apiName: CoverPolicy
+    displayName: "Cover policy"
+    workstream: A
+    group: "Bean sourcing & procurement"
+    primaryKey: [factory, origin]
+    properties:
+      - { apiName: factory,                   type: string }
+      - { apiName: origin,                    type: string }
+      - { apiName: physicalMonths,            type: double, description: "physical ~2 mo" }
+      - { apiName: forwardsMonths,            type: string, description: "forwards 2-5 mo" }
+      - { apiName: optimizationWindowMonths,  type: double, description: "9 mo window" }
+      - { apiName: floorMonths,               type: double, description: "3 mo combined" }
+      - { apiName: ceiling,                   type: string, description: "working capital" }
+      - { apiName: seasonalQualityAdjustments,type: string }
+
+  - apiName: BeanPurchaseContract
+    displayName: "Bean purchase contract"
+    workstream: A
+    group: "Bean sourcing & procurement"
+    primaryKey: purchaseContractId
+    backing: { datasource: origin_channels }
+    properties:
+      - { apiName: purchaseContractId, type: string }
+      - { apiName: origin,             type: string }
+      - { apiName: cropYear,           type: string }
+      - { apiName: grade,              type: string }
+      - { apiName: deliveryMonth,      type: string }
+      - { apiName: channel,            type: string }
+
+  - apiName: BeanLot
+    displayName: "Bean lot"
+    workstream: A
+    group: "Bean sourcing & procurement"
+    primaryKey: [origin, cropYear, lotNo]
+    properties:
+      - { apiName: origin,             type: string }
+      - { apiName: cropYear,           type: string }
+      - { apiName: lotNo,              type: string }
+      - { apiName: grade,              type: string }
+      - { apiName: qualityLayers,      type: array,  description: "theoretical | arrival | landed | realized" }
+      - { apiName: ffaDriftTrajectory, type: string }
+      - { apiName: storageDrift,       type: string, description: "arrival -> usage; not captured today" }
+
+  - apiName: OptimizerScenario
+    displayName: "Optimizer scenario"
+    workstream: A
+    group: "Bean sourcing & procurement"
+    primaryKey: scenarioId
+    properties:
+      - { apiName: scenarioId,  type: string }
+      - { apiName: inputs,      type: string }
+      - { apiName: constraints, type: string }
+      - { apiName: objective,   type: string }
+      - { apiName: output,      type: string, description: "commitment ladder" }
+      - { apiName: reusable,    type: boolean }
+
+  - apiName: DecisionRecord
+    displayName: "Decision record"
+    workstream: A
+    group: "Bean sourcing & procurement"
+    primaryKey: decisionId
+    backing: { datasource: decision_ledger }
+    properties:
+      - { apiName: decisionId,          type: string }
+      - { apiName: question,            type: string }
+      - { apiName: scenariosConsidered, type: array }
+      - { apiName: chosenScenario,      type: string }
+      - { apiName: humanOwner,          type: string }
+      - { apiName: overrideReasonCode,  type: string }
+      - { apiName: outcome,             type: string, description: "filled over time" }
+      - { apiName: versions,            type: string, description: "policy + agent + tool versions" }

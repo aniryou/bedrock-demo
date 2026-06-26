@@ -1,0 +1,176 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Snowflake Orders API",
+    "version": "1.0.0",
+    "description": "Read-only orders + customers service backed by Snowflake, used as an AgentCore Gateway target."
+  },
+  "servers": [
+    { "url": "https://REPLACE_WITH_LAMBDA_FUNCTION_URL", "description": "Lambda Function URL (set by infra/provision Snowflake Lambda)" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey", "in": "header", "name": "X-API-Key",
+        "description": "Service path — the agent's own identity. The Gateway injects this for non-OBO calls; the stub then signs a Snowflake KEYPAIR_JWT as the SELECT-only AGENT_RO role."
+      },
+      "BearerAuth": {
+        "type": "http", "scheme": "bearer",
+        "description": "User (OBO) path — a per-user Entra token the Gateway injects via TOKEN_EXCHANGE; the stub forwards it to Snowflake (token-type OAUTH) so Snowflake enforces THAT user's RBAC."
+      }
+    },
+    "schemas": {
+      "Order": {
+        "type": "object",
+        "properties": {
+          "order_id": { "type": "string" },
+          "customer_id": { "type": "string" },
+          "customer_name": { "type": "string" },
+          "customer_tier": { "type": "string" },
+          "customer_region": { "type": "string" },
+          "customer_credit_limit": { "type": "number" },
+          "amount": { "type": "number" },
+          "status": { "type": "string" },
+          "channel": { "type": "string" },
+          "region": { "type": "string" },
+          "created_at": { "type": "string" }
+        }
+      },
+      "Customer": {
+        "type": "object",
+        "properties": {
+          "customer_id": { "type": "string" },
+          "name": { "type": "string" },
+          "tier": { "type": "string" },
+          "region": { "type": "string" },
+          "credit_limit": { "type": "number" }
+        }
+      }
+    }
+  },
+  "security": [ { "ApiKeyAuth": [] }, { "BearerAuth": [] } ],
+  "paths": {
+    "/orders": {
+      "get": {
+        "operationId": "getOrders",
+        "summary": "List orders from Snowflake with optional filters",
+        "description": "Returns orders joined to their customer (name, tier, region, credit limit). Use this to find orders by status (e.g. OPEN), sales channel, customer tier, or a minimum amount. All filters are optional and combine with AND; omit them to list all orders.",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Filter by order status, e.g. OPEN, SHIPPED, CANCELLED (case-insensitive)."
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Filter by sales channel, e.g. WEB, PHONE, PARTNER (case-insensitive)."
+          },
+          {
+            "name": "tier",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Filter by customer tier, e.g. smb, enterprise (case-insensitive)."
+          },
+          {
+            "name": "min_amount",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "number" },
+            "description": "Only return orders whose amount is greater than or equal to this value."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching orders",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Order" } }
+              }
+            }
+          },
+          "401": { "description": "Missing or invalid credential (X-API-Key or Bearer token)" }
+        }
+      }
+    },
+    "/orders/{order_id}": {
+      "get": {
+        "operationId": "getOrder",
+        "summary": "Get a single order by id from Snowflake",
+        "description": "Returns one order (joined to its customer) by order id, e.g. O-1003. Use this when you already know the exact order id and need its full detail. Returns 404 if no such order exists.",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Order id, e.g. O-1003"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The order",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Order" }
+              }
+            }
+          },
+          "401": { "description": "Missing or invalid credential (X-API-Key or Bearer token)" },
+          "404": { "description": "No such order" }
+        }
+      }
+    },
+    "/customers": {
+      "get": {
+        "operationId": "listCustomers",
+        "summary": "List all customers from Snowflake",
+        "description": "Returns all customer records (name, tier, region, credit limit). Customer master data is non-confidential, so this is read on the agent's own identity and is available regardless of the signed-in user. Use this to look up a customer by name or to browse customers.",
+        "responses": {
+          "200": {
+            "description": "All customers",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Customer" } }
+              }
+            }
+          },
+          "401": { "description": "Missing or invalid credential (X-API-Key or Bearer token)" }
+        }
+      }
+    },
+    "/customers/{customer_id}": {
+      "get": {
+        "operationId": "getCustomer",
+        "summary": "Get a single customer by id from Snowflake",
+        "description": "Returns one customer record (name, tier, region, credit limit) by customer id, e.g. C-002. Use this to look up customer details such as tier or credit limit. Returns 404 if no such customer exists.",
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Customer id, e.g. C-002"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The customer",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Customer" }
+              }
+            }
+          },
+          "401": { "description": "Missing or invalid credential (X-API-Key or Bearer token)" },
+          "404": { "description": "No such customer" }
+        }
+      }
+    }
+  }
+}

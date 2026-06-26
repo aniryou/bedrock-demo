@@ -1,0 +1,35 @@
+# ═════════════════════════════════════════════════════════════════════════
+# ACTIONS — MVP credit / order-triage actions. validation rules are illustrative
+# expressions.
+# ═════════════════════════════════════════════════════════════════════════
+actionTypes:
+  - apiName: approveCreditLimit
+    displayName: "Approve credit limit"
+    description: "Set or raise a customer's credit limit; the enforced credit rules live here."
+    targetObjectType: CreditProfile
+    mutates: true
+    parameters:
+      - { apiName: requestedLimit,   type: double,  required: true }
+      - { apiName: paymentTermsDays, type: integer, required: true }
+      - { apiName: collateralPosted, type: boolean }
+    validation:
+      - { rule: "paymentTermsDays <= 90", message: "Credit terms cannot exceed 90 days" }
+      - { rule: "requestedLimit <= creditProfile.limit || collateralPosted", message: "Above the approved limit requires collateral or a committee override" }
+
+  - apiName: raiseException
+    displayName: "Raise exception"
+    description: "Open an order-triage exception when a mismatch or hold is detected."
+    targetObjectType: Exception
+    mutates: true
+    parameters:
+      - { apiName: type,          type: string, required: true, enum: [price, qty, contract_fit, credit, other] }
+      - { apiName: routedToOwner, type: string }
+
+  - apiName: allocateStockToOrder
+    displayName: "Allocate stock to order"
+    description: "Allocate available stock to a sales order, respecting regional stock rules."
+    targetObjectType: SalesOrder
+    mutates: true
+    parameters:
+      - { apiName: quantity,   type: double, required: true }
+      - { apiName: stockState, type: string, enum: [unrestricted, allocated] }

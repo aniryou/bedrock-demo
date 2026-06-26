@@ -1,0 +1,63 @@
+name: agent · CI
+
+# Lint + hermetic unit tests. No AWS, no model — the agent's real backends (Bedrock
+# Gateway / KB / Memory) are exercised only on the deployed runtime. Path-filtered to
+# agent/. Skills are fetched from the in-tree knowledge/ folder (no token needed).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "agent/**"
+      - ".github/workflows/agent-ci.yml"
+  pull_request:
+    paths:
+      - "agent/**"
+      - ".github/workflows/agent-ci.yml"
+
+defaults:
+  run:
+    working-directory: agent
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: false
+      - run: uv sync --extra dev
+      - name: Fetch skills from the in-tree knowledge/ folder
+        run: make skills
+        continue-on-error: true
+      - name: Lint skill manifests (any that were fetched)
+        run: |
+          python3 - <<'PY'
+          import sys
+          from pathlib import Path
+          import yaml
+          bad = []
+          for p in sorted(Path("skills").glob("*.skill.md")):
+              text = p.read_text()
+              lines = text.splitlines()
+              if not lines or lines[0].strip() != "---":
+                  bad.append(f"{p.name}: missing YAML frontmatter"); continue
+              end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+              meta = yaml.safe_load("\n".join(lines[1:end])) if end else None
+              if not isinstance(meta, dict) or "apiName" not in meta:
+                  bad.append(f"{p.name}: frontmatter needs apiName"); continue
+              # preload doctrine skills (preload: true) apply globally and carry no
+              # appliesTo binding — matches the knowledge repo's bindings schema.
+              if not meta.get("preload") and "appliesTo" not in meta:
+                  bad.append(f"{p.name}: frontmatter needs appliesTo (or preload: true)"); continue
+              if meta["apiName"] != p.name[:-len(".skill.md")]:
+                  bad.append(f"{p.name}: apiName '{meta['apiName']}' != filename stem")
+          if bad:
+              print("Invalid skill manifests:\n  " + "\n  ".join(bad)); sys.exit(1)
+          print("skill manifests OK")
+          PY
+      - name: Lint
+        run: uv run ruff check .
+      - name: Unit tests (hermetic)
+        run: uv run pytest tests -q

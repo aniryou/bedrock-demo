@@ -1,0 +1,20 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Provenance header. Auditors read this first.
+# ─────────────────────────────────────────────────────────────────────────
+schemaVersion: "1.2.0"
+ontologyVersion: "0.5.0"
+title: "Agro-Commodity Supply Chain Ontology"
+domain: "agro-commodities"
+owner: "scm-ontology@example.com"
+status: "draft"
+lastModified: "2026-06-17"
+notes: >
+  Entities and relationships across three work-streams — A (bean sourcing &
+  procurement), B (planning, blend & inventory), C (sales, contracting &
+  fulfilment) — derived from the supply-chain design diagram. The datasource
+  registry doubles as a system-of-record maturity view. Skills (skills/) and the
+  KB registry (kb/) bind into the ontology by apiName and are resolved by
+  build/bindings.py into build/bindings.json (the reverse index). A first set of
+  MVP credit / order-triage actions is defined; the broader A/B/C action catalog
+  still comes from the work-stream specs.
+  Property→column mappings are pending where sources are informal.

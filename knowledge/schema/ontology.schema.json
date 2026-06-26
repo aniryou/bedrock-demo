@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/ontology.schema.json",
+  "title": "File-based Ontology",
+  "description": "Contract for a file-based ontology serialized across YAML layer files and compiled to one JSON document.",
+  "type": "object",
+  "required": ["schemaVersion", "ontologyVersion", "objectTypes"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion":   { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "ontologyVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "title":  { "type": "string" },
+    "domain": { "type": "string" },
+    "owner":  { "type": "string" },
+    "status": { "enum": ["draft", "review", "approved"] },
+    "lastModified": { "type": "string", "format": "date" },
+    "notes":  { "type": "string" },
+
+    "connections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["apiName", "kind"],
+        "additionalProperties": true,
+        "properties": {
+          "apiName": { "$ref": "#/$defs/apiName" },
+          "kind":    { "type": "string" }
+        }
+      }
+    },
+
+    "datasources": { "type": "array", "items": { "$ref": "#/$defs/datasource" } },
+    "objectTypes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/objectType" } },
+    "linkTypes":   { "type": "array", "items": { "$ref": "#/$defs/linkType" } },
+    "actionTypes": { "type": "array", "items": { "$ref": "#/$defs/actionType" } }
+  },
+
+  "$defs": {
+    "apiName": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+      "description": "Stable identifier. Cross-references use this, never nesting."
+    },
+    "key": {
+      "description": "Primary key: a single property apiName, or an ordered list for composite keys.",
+      "oneOf": [
+        { "$ref": "#/$defs/apiName" },
+        { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/apiName" } }
+      ]
+    },
+    "propertyType": {
+      "enum": ["string", "integer", "long", "double", "decimal", "boolean", "date", "timestamp", "geopoint", "array"]
+    },
+    "cardinality": {
+      "enum": ["one_to_one", "one_to_many", "many_to_one", "many_to_many"]
+    },
+    "workstream": { "enum": ["A", "B", "C"] },
+    "classification": {
+      "enum": ["public", "internal", "confidential", "restricted"],
+      "description": "Data sensitivity tier. Drives downstream masking/row-access and whether a read needs user identity."
+    },
+    "authority": {
+      "enum": ["agent", "user"],
+      "description": "Whether executing the action requires the human user's authority (impersonate) or the agent may act on its own identity. Default derived in build/validate.py from target classification + mutates; an explicit value overrides. The ontology declares WHAT (privileged or not); the consuming agent owns HOW (which credential/IdP)."
+    },
+    "datasourceKind": {
+      "enum": [
+        "sap_object", "pluto_object",
+        "spreadsheet", "email", "messaging", "saas_app", "edi_feed", "connector",
+        "derived", "manual", "document_store", "master_data", "rest_api", "file"
+      ]
+    },
+
+    "datasource": {
+      "type": "object",
+      "required": ["apiName", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "apiName":    { "$ref": "#/$defs/apiName" },
+        "kind":       { "$ref": "#/$defs/datasourceKind" },
+        "connection": { "$ref": "#/$defs/apiName" },
+        "locator":    { "type": "object", "description": "Shape varies by kind. Optional for informal sources (email, manual, derived)." },
+        "grain":      { "type": "string" },
+        "primaryKeyColumns": { "type": "array", "items": { "type": "string" } },
+        "refresh":    { "type": "object" },
+        "owner":      { "type": "string" },
+        "classification": { "$ref": "#/$defs/classification" },
+        "note":       { "type": "string", "description": "Free text — e.g. current vs planned state, EDI/manual nuance." },
+        "derivedFrom": { "type": "array", "items": { "$ref": "#/$defs/apiName" } }
+      }
+    },
+
+    "property": {
+      "type": "object",
+      "required": ["apiName", "type"],
+      "additionalProperties": false,
+      "description": "Source-backed (column and/or source) or managed:true. column may be omitted when the mapping is pending. managed implies no column/source — enforced in build/validate.py.",
+      "properties": {
+        "apiName": { "$ref": "#/$defs/apiName" },
+        "type":    { "$ref": "#/$defs/propertyType" },
+        "column":  { "type": "string", "description": "Column in the object's backing datasource. Omit when not yet mapped." },
+        "source": {
+          "type": "object",
+          "required": ["datasource"],
+          "additionalProperties": false,
+          "description": "Field-level lineage override: this property is sourced from a DIFFERENT datasource.",
+          "properties": {
+            "datasource": { "$ref": "#/$defs/apiName" },
+            "column":     { "type": "string" },
+            "joinOn":     { "type": "object" }
+          }
+        },
+        "managed":  { "type": "boolean" },
+        "required": { "type": "boolean" },
+        "default":  {},
+        "enum":     { "type": "array" },
+        "classification": { "$ref": "#/$defs/classification" },
+        "description": { "type": "string" }
+      }
+    },
+
+    "objectType": {
+      "type": "object",
+      "required": ["apiName", "primaryKey", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "apiName":       { "$ref": "#/$defs/apiName" },
+        "displayName":   { "type": "string" },
+        "description":   { "type": "string" },
+        "aliases":       { "type": "array", "items": { "type": "string" }, "description": "Synonyms for KB auto-tagging and natural-language query expansion." },
+        "workstream":    { "$ref": "#/$defs/workstream" },
+        "group":         { "type": "string" },
+        "primaryKey":    { "$ref": "#/$defs/key" },
+        "titleProperty": { "$ref": "#/$defs/apiName" },
+        "classification":{ "$ref": "#/$defs/classification" },
+        "backing": {
+          "type": "object",
+          "required": ["datasource"],
+          "additionalProperties": false,
+          "properties": {
+            "datasource":       { "$ref": "#/$defs/apiName" },
+            "primaryKeyColumn": { "type": "string" }
+          }
+        },
+        "properties": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/property" } }
+      }
+    },
+
+    "linkEndpoint": {
+      "type": "object",
+      "required": ["objectType"],
+      "additionalProperties": false,
+      "properties": {
+        "objectType": { "$ref": "#/$defs/apiName" },
+        "key":        { "$ref": "#/$defs/apiName" },
+        "foreignKey": { "$ref": "#/$defs/apiName" }
+      }
+    },
+    "linkType": {
+      "type": "object",
+      "required": ["apiName", "cardinality", "from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "apiName":     { "$ref": "#/$defs/apiName" },
+        "displayName": { "type": "string" },
+        "aliases":     { "type": "array", "items": { "type": "string" } },
+        "kind":        { "enum": ["association", "dependency"] },
+        "cardinality": { "$ref": "#/$defs/cardinality" },
+        "from":        { "$ref": "#/$defs/linkEndpoint" },
+        "to":          { "$ref": "#/$defs/linkEndpoint" }
+      }
+    },
+
+    "actionType": {
+      "type": "object",
+      "required": ["apiName", "targetObjectType"],
+      "additionalProperties": false,
+      "properties": {
+        "apiName":          { "$ref": "#/$defs/apiName" },
+        "displayName":      { "type": "string" },
+        "description":      { "type": "string" },
+        "targetObjectType": { "$ref": "#/$defs/apiName" },
+        "mutates":   { "type": "boolean", "description": "True if the action writes/changes enterprise state. Feeds the authority derivation." },
+        "authority": { "$ref": "#/$defs/authority" },
+        "parameters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["apiName", "type"],
+            "additionalProperties": false,
+            "properties": {
+              "apiName":  { "$ref": "#/$defs/apiName" },
+              "type":     { "$ref": "#/$defs/propertyType" },
+              "required": { "type": "boolean" },
+              "enum":     { "type": "array" }
+            }
+          }
+        },
+        "validation": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["rule"],
+            "additionalProperties": false,
+            "properties": {
+              "rule":    { "type": "string" },
+              "message": { "type": "string" }
+            }
+          }
+        },
+        "effects": { "type": "array", "items": { "type": "object" } }
+      }
+    }
+  }
+}

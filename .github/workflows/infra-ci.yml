@@ -1,0 +1,94 @@
+name: infra · CI
+
+# Terraform fmt/validate + a Python lint for the orchestrator. Path-filtered so it
+# only runs when infra/ changes. The real `terraform plan` against live state is
+# opt-in (ENABLE_TF_PLAN) and informational.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra-ci.yml"
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra-ci.yml"
+
+permissions:
+  id-token: write
+  contents: read
+
+defaults:
+  run:
+    working-directory: infra
+
+jobs:
+  iac:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+      - name: Validate bootstrap
+        run: |
+          terraform -chdir=bootstrap init -backend=false -input=false
+          terraform -chdir=bootstrap validate
+      - name: Validate main
+        run: |
+          terraform -chdir=terraform init -backend=false -input=false
+          terraform -chdir=terraform validate
+
+  # Real `terraform plan` against the live remote state, surfaced on the PR so a
+  # reviewer sees the intended change before it is ever applied. Opt-in: set the
+  # repo variable ENABLE_TF_PLAN=true once the deploy secrets exist (see
+  # infra/docs/playbooks/cd-setup.md). Non-blocking (continue-on-error) and refresh=false so a
+  # transient plan failure or live-state drift can't fail the PR — this plan is informational only.
+  plan:
+    if: ${{ github.event_name == 'pull_request' && vars.ENABLE_TF_PLAN == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+      NAME_PREFIX: ${{ vars.NAME_PREFIX || 'order-triage' }}
+      TF_VAR_region: ${{ vars.AWS_REGION || 'us-west-2' }}
+      TF_VAR_agent_image_uri: ${{ secrets.AGENT_IMAGE_URI }}
+      TF_VAR_artifacts_bucket: ${{ secrets.ARTIFACTS_BUCKET }}
+      TF_VAR_snowflake_api_key: ${{ secrets.SNOWFLAKE_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          # Read-only PR plan role (pull_request-trusted, ReadOnlyAccess) — NOT the
+          # privileged deploy role. Set AWS_PLAN_ROLE_ARN from bootstrap output ci_plan_role_arn.
+          role-to-assume: ${{ secrets.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v4
+      - name: Resolve remote-state backend
+        run: |
+          ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+          echo "TFSTATE_BUCKET=${NAME_PREFIX}-tfstate-${ACCOUNT_ID}" >> "$GITHUB_ENV"
+      - name: Terraform plan (read-only, informational)
+        continue-on-error: true
+        run: |
+          terraform -chdir=terraform init -input=false -reconfigure \
+            -backend-config="bucket=$TFSTATE_BUCKET" \
+            -backend-config="region=$AWS_REGION"
+          terraform -chdir=terraform plan -input=false -refresh=false -lock=false -no-color | tee plan.txt
+          {
+            echo '### Terraform plan (refresh=false, informational)'
+            echo '```'
+            tail -c 60000 plan.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: false
+      - run: uv sync --extra dev
+      - run: uv run ruff check infra

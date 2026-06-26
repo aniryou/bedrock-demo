@@ -1,0 +1,2188 @@
+[
+ {
+  "key": "security",
+  "title": "Security architecture — order-triage AgentCore",
+  "subtitle": "One InvokeAgentRuntime call as an identity: Entra CUSTOM_JWT in · Cedar at the Gateway · SigV4 (agent) vs Entra-OBO (user) egress split · Snowflake RLS",
+  "desc": "Left-to-right security view: an analyst signs into Microsoft Entra via the webapp and invokes the AgentCore Runtime with the user JWT (CUSTOM_JWT). The Runtime streams to Bedrock Nova Lite behind a prompt-attack Guardrail, partitions memory by the Entra subject, and forwards the JWT to the AgentCore Gateway, which authorizes every MCP call with Cedar. Egress splits: SAP and order-actions Lambdas are called with the agent's SigV4 identity, while the Snowflake-query Lambda receives a per-user Entra OBO token, so Snowflake runs the query as the human under row-level security.",
+  "size": {
+   "w": 1380,
+   "h": 720
+  },
+  "nodes": [
+   {
+    "key": "analyst",
+    "x": 70,
+    "y": 320,
+    "icon": "user",
+    "title": "Analyst",
+    "sub": "human",
+    "label": "below"
+   },
+   {
+    "key": "webapp",
+    "x": 210,
+    "y": 320,
+    "icon": "client",
+    "title": "Webapp",
+    "sub": "Entra sign-in · JWT proxy",
+    "label": "below"
+   },
+   {
+    "key": "entra",
+    "x": 300,
+    "y": 140,
+    "icon": "entra",
+    "title": "Microsoft Entra ID",
+    "sub": "user IdP · brokers per-user OBO",
+    "label": "right"
+   },
+   {
+    "key": "runtime",
+    "x": 450,
+    "y": 320,
+    "icon": "bedrock",
+    "title": "AgentCore Runtime",
+    "sub": "CUSTOM_JWT · actor_id = sub",
+    "label": "below"
+   },
+   {
+    "key": "model",
+    "x": 380,
+    "y": 470,
+    "icon": "bedrock",
+    "title": "Bedrock Nova Lite",
+    "sub": "ConverseStream",
+    "label": "below"
+   },
+   {
+    "key": "guard",
+    "x": 380,
+    "y": 600,
+    "icon": "shield",
+    "title": "Bedrock Guardrail",
+    "sub": "PROMPT_ATTACK filter",
+    "label": "below"
+   },
+   {
+    "key": "memory",
+    "x": 630,
+    "y": 470,
+    "icon": "db",
+    "title": "AgentCore Memory",
+    "sub": "per-user (actor-partitioned)",
+    "label": "below"
+   },
+   {
+    "key": "gateway",
+    "x": 690,
+    "y": 320,
+    "icon": "apigw",
+    "title": "AgentCore Gateway",
+    "sub": "Cedar ENFORCE · OBO broker",
+    "label": "below"
+   },
+   {
+    "key": "sap",
+    "x": 950,
+    "y": 222,
+    "icon": "lambda",
+    "title": "SAP credit",
+    "sub": "SigV4 · IAM",
+    "label": "below"
+   },
+   {
+    "key": "orders",
+    "x": 950,
+    "y": 318,
+    "icon": "lambda",
+    "title": "Order-actions",
+    "sub": "SigV4 · IAM",
+    "label": "below"
+   },
+   {
+    "key": "snowl",
+    "x": 950,
+    "y": 414,
+    "icon": "lambda",
+    "title": "Snowflake-query",
+    "sub": "OBO Bearer | KEYPAIR_JWT",
+    "label": "below"
+   },
+   {
+    "key": "secrets",
+    "x": 950,
+    "y": 600,
+    "icon": "secrets",
+    "title": "Secrets Manager",
+    "sub": "OBO secret · Snowflake RSA key",
+    "label": "below"
+   },
+   {
+    "key": "snowflake",
+    "x": 1250,
+    "y": 318,
+    "icon": "snowflake",
+    "title": "Snowflake",
+    "sub": "EXTERNAL_OAUTH · RLS by region",
+    "label": "below"
+   }
+  ],
+  "groups": [
+   {
+    "label": "AWS Cloud · us-west-2",
+    "dashed": false,
+    "nodes": [
+     "runtime",
+     "gateway",
+     "model",
+     "guard",
+     "memory",
+     "sap",
+     "orders",
+     "snowl",
+     "secrets"
+    ],
+    "pad": 30
+   },
+   {
+    "label": "AWS Lambda · Function URLs",
+    "dashed": true,
+    "nodes": [
+     "sap",
+     "orders",
+     "snowl"
+    ],
+    "pad": 20
+   }
+  ],
+  "edges": [
+   {
+    "s": "analyst",
+    "d": "webapp",
+    "kind": "req",
+    "label": "sign in",
+    "n": "1",
+    "ss": null,
+    "ds": null,
+    "via": null
+   },
+   {
+    "s": "entra",
+    "d": "webapp",
+    "kind": "id",
+    "label": "user access token (Custom JWT)",
+    "n": "2",
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "webapp",
+    "d": "runtime",
+    "kind": "req",
+    "label": "Invoke Runtime (Bearer JWT)",
+    "n": "3",
+    "ss": null,
+    "ds": null,
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "model",
+    "kind": "req",
+    "label": "invoke model",
+    "n": "4",
+    "ss": "bl",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "model",
+    "d": "guard",
+    "kind": "req",
+    "label": "validate guardrails",
+    "n": "5",
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "memory",
+    "kind": "sup",
+    "label": "store / retrieve",
+    "n": "6",
+    "ss": "br",
+    "ds": "tl",
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "gateway",
+    "kind": "req",
+    "label": "MCP tools call (+ user JWT)",
+    "n": "7",
+    "ss": null,
+    "ds": null,
+    "via": null
+   },
+   {
+    "s": "gateway",
+    "d": "entra",
+    "kind": "id",
+    "label": "OBO token exchange (per-user)",
+    "n": null,
+    "ss": "t",
+    "ds": "t",
+    "via": [
+     [
+      690,
+      92
+     ],
+     [
+      300,
+      92
+     ]
+    ]
+   },
+   {
+    "s": "gateway",
+    "d": "sap",
+    "kind": "req",
+    "label": "SigV4 (agent)",
+    "n": "8a",
+    "ss": "tr",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "gateway",
+    "d": "orders",
+    "kind": "req",
+    "label": "SigV4 (agent)",
+    "n": "8b",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "gateway",
+    "d": "snowl",
+    "kind": "req",
+    "label": "OBO Bearer (user)",
+    "n": "8c",
+    "ss": "br",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "snowl",
+    "d": "snowflake",
+    "kind": "req",
+    "label": "OAUTH → run as the user · RLS",
+    "n": "9",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "snowl",
+    "d": "secrets",
+    "kind": "sup",
+    "label": "reads RSA key (service path)",
+    "n": null,
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   }
+  ],
+  "notes": "calibrated"
+ },
+ {
+  "key": "agent",
+  "title": "Agent reasoning plane — order-triage AgentCore",
+  "subtitle": "One InvokeAgentRuntime turn inside the CUSTOM_JWT gate: Strands event loop drives Nova Lite (+Guardrail), LOCAL knowledge tools, the Cedar-guarded MCP Gateway, and per-user Memory",
+  "desc": "Per-turn reasoning loop of the order-triage AgentCore agent: caller -> AgentCore Runtime (CUSTOM_JWT) -> Strands Agent event loop, which calls Bedrock Nova Lite (+Guardrail), LOCAL tools over the three knowledge surfaces (Knowledge Base -> S3 Vectors, ontology + skills corpus), the AgentCore Gateway (MCP, Cedar ENFORCE) to backend Lambdas, and reads/writes AgentCore Memory.",
+  "size": {
+   "w": 1560,
+   "h": 820
+  },
+  "nodes": [
+   {
+    "key": "caller",
+    "x": 90,
+    "y": 330,
+    "icon": "client",
+    "title": "Caller",
+    "sub": "InvokeAgentRuntime + JWT",
+    "label": "below"
+   },
+   {
+    "key": "runtime",
+    "x": 240,
+    "y": 330,
+    "icon": "bedrock",
+    "title": "AgentCore Runtime",
+    "sub": "CUSTOM_JWT gate · invoke()",
+    "label": "below"
+   },
+   {
+    "key": "agent",
+    "x": 450,
+    "y": 330,
+    "icon": "bedrock",
+    "title": "Strands Agent",
+    "sub": "event loop · stream_async",
+    "label": "below"
+   },
+   {
+    "key": "model",
+    "x": 450,
+    "y": 160,
+    "icon": "bedrock",
+    "title": "Bedrock Nova Lite",
+    "sub": "ConverseStream",
+    "label": "below"
+   },
+   {
+    "key": "guard",
+    "x": 300,
+    "y": 160,
+    "icon": "shield",
+    "title": "Guardrail",
+    "sub": "PROMPT_ATTACK · async",
+    "label": "below"
+   },
+   {
+    "key": "localtools",
+    "x": 720,
+    "y": 330,
+    "icon": "bedrock",
+    "title": "LOCAL tools",
+    "sub": "search · describe · load_skill",
+    "label": "below"
+   },
+   {
+    "key": "kb",
+    "x": 1000,
+    "y": 250,
+    "icon": "bedrock",
+    "title": "Knowledge Base",
+    "sub": "Titan v2 · k=3",
+    "label": "below"
+   },
+   {
+    "key": "s3v",
+    "x": 1280,
+    "y": 250,
+    "icon": "s3",
+    "title": "S3 Vectors",
+    "sub": "kb/ policy docs",
+    "label": "below"
+   },
+   {
+    "key": "corpus",
+    "x": 1000,
+    "y": 420,
+    "icon": "db",
+    "title": "Ontology + skills",
+    "sub": "bindings · skills",
+    "label": "below"
+   },
+   {
+    "key": "mcptools",
+    "x": 720,
+    "y": 600,
+    "icon": "bedrock",
+    "title": "MCP tools",
+    "sub": "sap/orders/snowflake + user JWT",
+    "label": "below"
+   },
+   {
+    "key": "gateway",
+    "x": 1000,
+    "y": 600,
+    "icon": "apigw",
+    "title": "AgentCore Gateway",
+    "sub": "MCP · Cedar ENFORCE",
+    "label": "below"
+   },
+   {
+    "key": "backends",
+    "x": 1280,
+    "y": 600,
+    "icon": "lambda",
+    "title": "Backend Lambdas",
+    "sub": "SAP · orders · snowflake",
+    "label": "below"
+   },
+   {
+    "key": "memory",
+    "x": 450,
+    "y": 560,
+    "icon": "db",
+    "title": "AgentCore Memory",
+    "sub": "short-term + user_context",
+    "label": "below"
+   },
+   {
+    "key": "ns",
+    "x": 240,
+    "y": 560,
+    "icon": "db",
+    "title": "LT namespaces",
+    "sub": "per actor_id · facts/prefs/sums",
+    "label": "below"
+   }
+  ],
+  "groups": [
+   {
+    "label": "AWS Cloud · AgentCore Runtime (us-west-2)",
+    "dashed": false,
+    "nodes": [
+     "runtime",
+     "agent",
+     "model",
+     "guard",
+     "localtools",
+     "kb",
+     "corpus",
+     "mcptools",
+     "gateway",
+     "memory",
+     "ns"
+    ],
+    "pad": 30
+   },
+   {
+    "label": "LOCAL tools — never via Gateway",
+    "dashed": true,
+    "nodes": [
+     "localtools",
+     "kb",
+     "corpus"
+    ],
+    "pad": 28
+   },
+   {
+    "label": "MCP tools to backends",
+    "dashed": true,
+    "nodes": [
+     "mcptools",
+     "gateway",
+     "backends"
+    ],
+    "pad": 26
+   },
+   {
+    "label": "Memory (per actor_id)",
+    "dashed": true,
+    "nodes": [
+     "memory",
+     "ns"
+    ],
+    "pad": 20
+   }
+  ],
+  "edges": [
+   {
+    "s": "caller",
+    "d": "runtime",
+    "kind": "req",
+    "label": "InvokeAgentRuntime (Bearer JWT)",
+    "n": "1",
+    "ss": null,
+    "ds": null,
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "agent",
+    "kind": "req",
+    "label": "validated invoke() · build_agent",
+    "n": "2",
+    "ss": null,
+    "ds": null,
+    "via": null
+   },
+   {
+    "s": "agent",
+    "d": "model",
+    "kind": "req",
+    "label": "ConverseStream ⇄ deltas",
+    "n": "3",
+    "ss": "t",
+    "ds": "b",
+    "via": null
+   },
+   {
+    "s": "model",
+    "d": "guard",
+    "kind": "id",
+    "label": "guardrailConfig (async)",
+    "n": null,
+    "ss": "l",
+    "ds": "r",
+    "via": null
+   },
+   {
+    "s": "agent",
+    "d": "localtools",
+    "kind": "req",
+    "label": "local tool call ⇄ result",
+    "n": "4a",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "localtools",
+    "d": "kb",
+    "kind": "req",
+    "label": "Retrieve k=3",
+    "n": null,
+    "ss": "tr",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "kb",
+    "d": "s3v",
+    "kind": "sup",
+    "label": "vector search",
+    "n": null,
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "localtools",
+    "d": "corpus",
+    "kind": "sup",
+    "label": "reverse index + skill body",
+    "n": null,
+    "ss": "br",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "agent",
+    "d": "mcptools",
+    "kind": "req",
+    "label": "MCP call ⇄ result (+ user JWT)",
+    "n": "4b",
+    "ss": "br",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "mcptools",
+    "d": "gateway",
+    "kind": "req",
+    "label": "over MCP session",
+    "n": null,
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "gateway",
+    "d": "backends",
+    "kind": "req",
+    "label": "OpenAPI egress (SigV4/OBO)",
+    "n": "5",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "agent",
+    "d": "memory",
+    "kind": "sup",
+    "label": "persist + read user_context",
+    "n": "6",
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "memory",
+    "d": "ns",
+    "kind": "sup",
+    "label": "per actor_id namespaces",
+    "n": null,
+    "ss": "l",
+    "ds": "r",
+    "via": null
+   }
+  ],
+  "notes": "Per-turn reasoning loop only (steps 1-8); cold-start assembly (build_agent steps 1-6) and the identity/OBO/Snowflake-RLS data plane are separate diagrams. Cedar folded into the Gateway label. Backend Lambdas + Snowflake collapsed to one out-of-scope node. Guardrail shown as an async id-edge off the model (PROMPT_ATTACK-only, default-on when both id+version env vars set). LOCAL tools never traverse the Gateway; S3 Vectors sits just outside that dashed zone, reached from the Knowledge Base by a supporting vector-search edge. Memory is partitioned per actor_id and active only when session_id is non-null. 5a/5b and 7a/7b are the parallel tool-call / tool-result fan-out of one event-loop cycle."
+ },
+ {
+  "key": "memory",
+  "title": "Memory architecture — order-triage AgentCore",
+  "subtitle": "Entra sub = actor_id partition key · async WRITE (CreateEvent -> short-term -> extract 3 strategies) vs per-turn READ (RetrieveMemoryRecords -> threshold -> <user_context>)",
+  "desc": "The per-user memory plane: the Entra subject becomes actor_id; the AgentCore Runtime writes short-term events to AgentCore Memory every turn (async), an extraction pipeline populates three long-term strategies (SEMANTIC/facts, USER_PREFERENCE/preferences, SUMMARIZATION/summaries) keyed per actor_id, and each user turn retrieves and prepends a user_context block to the model prompt.",
+  "size": {
+   "w": 1660,
+   "h": 740
+  },
+  "nodes": [
+   {
+    "key": "user",
+    "x": 70,
+    "y": 330,
+    "icon": "user",
+    "title": "Analyst / Caller",
+    "sub": "Entra sign-in (human)",
+    "label": "below"
+   },
+   {
+    "key": "entra",
+    "x": 300,
+    "y": 150,
+    "icon": "entra",
+    "title": "Microsoft Entra ID",
+    "sub": "user JWT · sub / oid claims",
+    "label": "right"
+   },
+   {
+    "key": "ident",
+    "x": 300,
+    "y": 330,
+    "icon": "iam",
+    "title": "identity.actor_id()",
+    "sub": "sub->oid->ANONYMOUS · opaque",
+    "label": "below"
+   },
+   {
+    "key": "rt",
+    "x": 540,
+    "y": 330,
+    "icon": "bedrock",
+    "title": "AgentCore Runtime",
+    "sub": "CUSTOM_JWT · session manager",
+    "label": "below"
+   },
+   {
+    "key": "agent",
+    "x": 540,
+    "y": 490,
+    "icon": "bedrock",
+    "title": "Strands Agent",
+    "sub": "Nova Lite · ConverseStream",
+    "label": "below"
+   },
+   {
+    "key": "mem",
+    "x": 790,
+    "y": 330,
+    "icon": "db",
+    "title": "AgentCore Memory",
+    "sub": "actor-partitioned store",
+    "label": "below"
+   },
+   {
+    "key": "stevents",
+    "x": 1030,
+    "y": 150,
+    "icon": "db",
+    "title": "Short-term events",
+    "sub": "CreateEvent · 90d expiry",
+    "label": "below"
+   },
+   {
+    "key": "pipe",
+    "x": 1250,
+    "y": 150,
+    "icon": "bedrock",
+    "title": "Async extraction",
+    "sub": "InvokeModel · lag s-min",
+    "label": "below"
+   },
+   {
+    "key": "facts",
+    "x": 1430,
+    "y": 145,
+    "icon": "db",
+    "title": "SEMANTIC /facts",
+    "sub": "{actorId} · k5 · >=0.3",
+    "label": "right"
+   },
+   {
+    "key": "prefs",
+    "x": 1430,
+    "y": 270,
+    "icon": "db",
+    "title": "USER_PREFERENCE",
+    "sub": "/preferences/{a} · k5",
+    "label": "right"
+   },
+   {
+    "key": "summ",
+    "x": 1430,
+    "y": 395,
+    "icon": "db",
+    "title": "SUMMARIZATION",
+    "sub": "/summaries/{a}/{s} · k3",
+    "label": "right"
+   },
+   {
+    "key": "retrieve",
+    "x": 1030,
+    "y": 490,
+    "icon": "bedrock",
+    "title": "RetrieveMemoryRecords",
+    "sub": "~3/turn · threshold concat",
+    "label": "below"
+   },
+   {
+    "key": "inject",
+    "x": 790,
+    "y": 490,
+    "icon": "bedrock",
+    "title": "<user_context>",
+    "sub": "prepend to user message",
+    "label": "below"
+   }
+  ],
+  "groups": [
+   {
+    "label": "AgentCore Runtime (order_triage) · us-west-2",
+    "dashed": false,
+    "nodes": [
+     "rt",
+     "agent"
+    ],
+    "pad": 28
+   },
+   {
+    "label": "AgentCore Memory",
+    "dashed": false,
+    "nodes": [
+     "mem",
+     "stevents",
+     "pipe",
+     "facts",
+     "prefs",
+     "summ",
+     "retrieve",
+     "inject"
+    ],
+    "pad": 30
+   },
+   {
+    "label": "LONG-TERM strategies — per actorId",
+    "dashed": true,
+    "nodes": [
+     "facts",
+     "prefs",
+     "summ"
+    ],
+    "pad": 18
+   }
+  ],
+  "edges": [
+   {
+    "s": "user",
+    "d": "entra",
+    "kind": "id",
+    "label": "sign in",
+    "n": null,
+    "ss": "t",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "entra",
+    "d": "rt",
+    "kind": "id",
+    "label": "1 InvokeAgentRuntime (Bearer JWT)",
+    "n": "1",
+    "ss": "b",
+    "ds": "t",
+    "via": [
+     [
+      300,
+      255
+     ],
+     [
+      540,
+      255
+     ]
+    ]
+   },
+   {
+    "s": "rt",
+    "d": "ident",
+    "kind": "id",
+    "label": "2 set_user_jwt -> actor_id()",
+    "n": "2",
+    "ss": "l",
+    "ds": "r",
+    "via": null
+   },
+   {
+    "s": "ident",
+    "d": "mem",
+    "kind": "id",
+    "label": "actor_id partition key",
+    "n": null,
+    "ss": "b",
+    "ds": "l",
+    "via": [
+     [
+      300,
+      420
+     ],
+     [
+      790,
+      420
+     ]
+    ]
+   },
+   {
+    "s": "agent",
+    "d": "mem",
+    "kind": "req",
+    "label": "3 CreateEvent (every turn)",
+    "n": "3",
+    "ss": "r",
+    "ds": "bl",
+    "via": null
+   },
+   {
+    "s": "mem",
+    "d": "stevents",
+    "kind": "req",
+    "label": "4 persist raw event",
+    "n": "4",
+    "ss": "tr",
+    "ds": "l",
+    "via": [
+     [
+      790,
+      150
+     ]
+    ]
+   },
+   {
+    "s": "stevents",
+    "d": "pipe",
+    "kind": "req",
+    "label": "5 async (lag s-min)",
+    "n": "5",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "pipe",
+    "d": "facts",
+    "kind": "req",
+    "label": "6a facts",
+    "n": "6a",
+    "ss": "tr",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "pipe",
+    "d": "prefs",
+    "kind": "req",
+    "label": "6b prefs",
+    "n": "6b",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "pipe",
+    "d": "summ",
+    "kind": "req",
+    "label": "6c summary",
+    "n": "6c",
+    "ss": "br",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "stevents",
+    "d": "mem",
+    "kind": "sup",
+    "label": "in-session replay",
+    "n": null,
+    "ss": "bl",
+    "ds": "tr",
+    "via": [
+     [
+      1030,
+      230
+     ],
+     [
+      855,
+      230
+     ]
+    ]
+   },
+   {
+    "s": "mem",
+    "d": "retrieve",
+    "kind": "req",
+    "label": "on MessageAddedEvent",
+    "n": "7",
+    "ss": "br",
+    "ds": "t",
+    "via": [
+     [
+      790,
+      580
+     ],
+     [
+      1030,
+      580
+     ]
+    ]
+   },
+   {
+    "s": "retrieve",
+    "d": "facts",
+    "kind": "sup",
+    "label": "search top_k5",
+    "n": null,
+    "ss": "t",
+    "ds": "bl",
+    "via": null
+   },
+   {
+    "s": "retrieve",
+    "d": "prefs",
+    "kind": "sup",
+    "label": "",
+    "n": null,
+    "ss": "tr",
+    "ds": "bl",
+    "via": null
+   },
+   {
+    "s": "retrieve",
+    "d": "summ",
+    "kind": "sup",
+    "label": "search top_k3",
+    "n": null,
+    "ss": "r",
+    "ds": "b",
+    "via": null
+   },
+   {
+    "s": "retrieve",
+    "d": "inject",
+    "kind": "req",
+    "label": "hits >=0.3 → concat",
+    "n": "8",
+    "ss": "l",
+    "ds": "r",
+    "via": null
+   },
+   {
+    "s": "inject",
+    "d": "agent",
+    "kind": "req",
+    "label": "9 prepend <user_context>",
+    "n": "9",
+    "ss": "l",
+    "ds": "b",
+    "via": [
+     [
+      640,
+      490
+     ],
+     [
+      640,
+      560
+     ],
+     [
+      540,
+      560
+     ]
+    ]
+   }
+  ],
+  "notes": "Faithful to memory-architecture.md + ADR-0002. WRITE path (steps 3-6c, thick req): Strands Agent -> AgentCore Memory CreateEvent every turn -> short-term event store (90d) -> async model-backed extraction (memory_execution_role, only bedrock:InvokeModel) -> the three long-term strategies (SEMANTIC /facts/{actorId}, USER_PREFERENCE /preferences/{actorId}, SUMMARIZATION /summaries/{actorId}/{sessionId}), all keyed per actor_id. READ path (steps 7-9, thick req): on a user MessageAddedEvent, RetrieveMemoryRecords (~3/turn, top_k 5/5/3, score floor 0.3) -> concat hits -> prepend <user_context> to the latest user message (message-level, not system prompt). actor_id is the Entra sub (sub->oid->ANONYMOUS), read off the contextvar by the session manager (not via build_agent) — shown as the blue identity partition-key edge across the top. In-session short-term replay and the per-namespace searches are grey supporting edges. Observability control plane (native RetrieveMemoryRecords span, ADOT boto3 span, vended logs/X-Ray) is intentionally folded into prose, not drawn, to keep the data-plane WRITE-vs-READ split legible. Validated by rendering with _awsviz.render + qlmanage; no node/label overlaps at the chosen coordinates."
+ },
+ {
+  "key": "observability",
+  "title": "Observability architecture — order-triage AgentCore (control plane)",
+  "subtitle": "Source (telemetry emitters) → Routing + Enrichment (log groups · X-Ray · evaluations) → Destination (governance / operations dashboards · anomaly alarms → SNS → email). Off the InvokeAgentRuntime request path.",
+  "desc": "Grey control plane of the order-triage AgentCore system. Two independent emission mechanisms — ADOT gen_ai.* spans to X-Ray Transaction Search (aws/spans), and a hand-rolled per-turn EMF token metric printed to the UNMASKED runtime -DEFAULT log group and auto-extracted into the OrderTriage/Agent namespace — feed per-resource APPLICATION_LOGS / USAGE_LOGS / TRACES delivery trios plus the MASKED Bedrock model-invocation log. Downstream: 4 audience dashboards, the static+anomaly alarms rolling into a composite to SNS and email, Contributor Insights, App-Signals SLOs, and opt-in online Evaluations.",
+  "size": {
+   "w": 1780,
+   "h": 1060
+  },
+  "nodes": [
+   {
+    "key": "guard",
+    "x": 95,
+    "y": 215,
+    "icon": "shield",
+    "title": "Guardrail",
+    "sub": "PROMPT_ATTACK",
+    "label": "below"
+   },
+   {
+    "key": "model",
+    "x": 255,
+    "y": 215,
+    "icon": "bedrock",
+    "title": "Bedrock Nova Lite",
+    "sub": "ConverseStream",
+    "label": "below"
+   },
+   {
+    "key": "runtime",
+    "x": 175,
+    "y": 405,
+    "icon": "bedrock",
+    "title": "AgentCore Runtime",
+    "sub": "EMF tokens · ADOT spans",
+    "label": "below"
+   },
+   {
+    "key": "memory",
+    "x": 175,
+    "y": 575,
+    "icon": "db",
+    "title": "AgentCore Memory",
+    "sub": "session events",
+    "label": "below"
+   },
+   {
+    "key": "gateway",
+    "x": 175,
+    "y": 750,
+    "icon": "apigw",
+    "title": "AgentCore Gateway",
+    "sub": "app logs",
+    "label": "below"
+   },
+   {
+    "key": "kb",
+    "x": 175,
+    "y": 925,
+    "icon": "bedrock",
+    "title": "Bedrock KB",
+    "sub": "ingestion logs",
+    "label": "below"
+   },
+   {
+    "key": "modellogs",
+    "x": 620,
+    "y": 215,
+    "icon": "cwlogs",
+    "title": "Model Invocation Logs",
+    "sub": "PII-masked",
+    "label": "below"
+   },
+   {
+    "key": "rtlog",
+    "x": 620,
+    "y": 430,
+    "icon": "cwlogs",
+    "title": "Runtime Default Log",
+    "sub": "EMF token metric",
+    "label": "below"
+   },
+   {
+    "key": "xray",
+    "x": 620,
+    "y": 660,
+    "icon": "xray",
+    "title": "X-Ray Transaction Search",
+    "sub": "gen_ai spans",
+    "label": "below"
+   },
+   {
+    "key": "vusage",
+    "x": 620,
+    "y": 830,
+    "icon": "cwlogs",
+    "title": "Vended Usage Logs",
+    "sub": "vCPU · GB-h",
+    "label": "below"
+   },
+   {
+    "key": "vapp",
+    "x": 620,
+    "y": 970,
+    "icon": "cwlogs",
+    "title": "Vended App Logs",
+    "sub": "per-session",
+    "label": "below"
+   },
+   {
+    "key": "evals",
+    "x": 910,
+    "y": 320,
+    "icon": "bedrock",
+    "title": "Online Evaluations",
+    "sub": "LLM-as-judge (opt-in)",
+    "label": "below"
+   },
+   {
+    "key": "anomaly",
+    "x": 910,
+    "y": 510,
+    "icon": "alarm",
+    "title": "Anomaly Alarms",
+    "sub": "agent-health rollup",
+    "label": "below"
+   },
+   {
+    "key": "spans",
+    "x": 910,
+    "y": 690,
+    "icon": "cwlogs",
+    "title": "Spans Log Group",
+    "sub": "indexed events",
+    "label": "below"
+   },
+   {
+    "key": "govdash",
+    "x": 1300,
+    "y": 300,
+    "icon": "cloudwatch",
+    "title": "Governance Dashboard",
+    "sub": "evals · guardrails",
+    "label": "below"
+   },
+   {
+    "key": "opsdash",
+    "x": 1300,
+    "y": 620,
+    "icon": "cloudwatch",
+    "title": "Operations Dashboard",
+    "sub": "latency · cost · health",
+    "label": "below"
+   },
+   {
+    "key": "alerts",
+    "x": 1300,
+    "y": 885,
+    "icon": "sns",
+    "title": "Alerts Topic",
+    "sub": "SNS",
+    "label": "below"
+   },
+   {
+    "key": "email",
+    "x": 1570,
+    "y": 885,
+    "icon": "ses",
+    "title": "Email Alert",
+    "sub": "on confirmed sub",
+    "label": "below"
+   }
+  ],
+  "groups": [
+   {
+    "label": "Source — telemetry emitters",
+    "dashed": false,
+    "nodes": [
+     "guard",
+     "model",
+     "runtime",
+     "memory",
+     "gateway",
+     "kb"
+    ],
+    "pad": 28
+   },
+   {
+    "label": "Routing + Enrichment — log groups · X-Ray · evaluations",
+    "dashed": false,
+    "nodes": [
+     "modellogs",
+     "rtlog",
+     "xray",
+     "vusage",
+     "vapp",
+     "evals",
+     "anomaly",
+     "spans"
+    ],
+    "pad": 30
+   },
+   {
+    "label": "Destination — dashboards + alerts",
+    "dashed": false,
+    "nodes": [
+     "govdash",
+     "opsdash",
+     "alerts",
+     "email"
+    ],
+    "pad": 28
+   }
+  ],
+  "edges": [
+   {
+    "s": "guard",
+    "d": "model",
+    "kind": "sup",
+    "label": "on model path",
+    "n": null,
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "model",
+    "d": "modellogs",
+    "kind": "req",
+    "label": "request + metadata",
+    "n": "1",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "modellogs",
+    "d": "govdash",
+    "kind": "req",
+    "label": "invocations",
+    "n": "2",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "rtlog",
+    "kind": "req",
+    "label": "per-turn tokens (EMF)",
+    "n": "3",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "rtlog",
+    "d": "evals",
+    "kind": "req",
+    "label": "LLM-as-judge eval",
+    "n": "4",
+    "ss": "tr",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "evals",
+    "d": "govdash",
+    "kind": "req",
+    "label": "evaluator scores",
+    "n": "5",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "rtlog",
+    "d": "anomaly",
+    "kind": "req",
+    "label": "check anomalies",
+    "n": "6",
+    "ss": "br",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "anomaly",
+    "d": "alerts",
+    "kind": "req",
+    "label": "agent-health rollup",
+    "n": "7",
+    "ss": "r",
+    "ds": "tl",
+    "via": null
+   },
+   {
+    "s": "rtlog",
+    "d": "opsdash",
+    "kind": "sup",
+    "label": "cost / contributor insights",
+    "n": "8",
+    "ss": "r",
+    "ds": "l",
+    "via": [
+     [
+      1110,
+      430
+     ]
+    ]
+   },
+   {
+    "s": "runtime",
+    "d": "xray",
+    "kind": "req",
+    "label": "ADOT gen_ai spans",
+    "n": "9",
+    "ss": "br",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "memory",
+    "d": "xray",
+    "kind": "sup",
+    "label": "session events",
+    "n": null,
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "xray",
+    "d": "spans",
+    "kind": "req",
+    "label": "events + index",
+    "n": "10",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "spans",
+    "d": "opsdash",
+    "kind": "req",
+    "label": "latency / health",
+    "n": "11",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "gateway",
+    "d": "vusage",
+    "kind": "req",
+    "label": "application logs",
+    "n": "12",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "vusage",
+    "d": "opsdash",
+    "kind": "sup",
+    "label": "system saturation",
+    "n": "13",
+    "ss": "r",
+    "ds": "bl",
+    "via": [
+     [
+      1110,
+      830
+     ]
+    ]
+   },
+   {
+    "s": "kb",
+    "d": "vapp",
+    "kind": "req",
+    "label": "ingestion logs",
+    "n": "14",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "vapp",
+    "d": "alerts",
+    "kind": "req",
+    "label": "KB ingestion error",
+    "n": "15",
+    "ss": "r",
+    "ds": "bl",
+    "via": [
+     [
+      1110,
+      970
+     ]
+    ]
+   },
+   {
+    "s": "alerts",
+    "d": "email",
+    "kind": "req",
+    "label": "agent-health rollup",
+    "n": "16",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   }
+  ],
+  "notes": "Mirrors the Source→Routing+Enrichment→Destination control-plane flow of the user's reference; faithful to observability-architecture.md (EMF token metric, ADOT gen_ai spans → X-Ray, vended logs, dashboards/alarms/SNS)."
+ },
+ {
+  "key": "evaluation",
+  "title": "Evaluation architecture — order-triage AgentCore",
+  "subtitle": "Two surfaces grade one agent: OFFLINE pytest gate (deterministic + Anthropic judge) blocks the image · ONLINE AgentCore Evaluations sample the shared gen_ai trace substrate (scoring BLOCKED on AgentSpanMappingException)",
+  "desc": "The evaluation plane of the order-triage AgentCore system, shown left-to-right as two lanes that grade the same order_triage Strands agent over a shared gen_ai trace substrate. OFFLINE (left): a developer/CI pytest gate runs the real agent over cases.yaml, applies deterministic tool/substring checks then an Anthropic LLM-as-judge, and a green gate publishes the agent image to ECR which deploys to the runtime. SHARED (centre): the AgentCore Runtime emits gen_ai spans (aws/spans + -DEFAULT content). ONLINE (right): AgentCore Online Evaluations sample those traces at 100%, run 5 built-in evaluators whose InvokeModel judge currently fails with AgentSpanMappingException (0 scores), with result records and the Operations dashboard eval panel as sinks.",
+  "size": {
+   "w": 1660,
+   "h": 820
+  },
+  "nodes": [
+   {
+    "key": "dev",
+    "x": 70,
+    "y": 330,
+    "icon": "ghactions",
+    "title": "Developer / CI",
+    "sub": "runs pytest eval gate",
+    "label": "below"
+   },
+   {
+    "key": "cases",
+    "x": 210,
+    "y": 480,
+    "icon": "s3",
+    "title": "cases.yaml",
+    "sub": "7 scenarios",
+    "label": "below"
+   },
+   {
+    "key": "harness",
+    "x": 360,
+    "y": 330,
+    "icon": "python",
+    "title": "test_eval.py",
+    "sub": "pytest gate · parametrize",
+    "label": "below"
+   },
+   {
+    "key": "agent",
+    "x": 360,
+    "y": 480,
+    "icon": "bedrock",
+    "title": "build_agent()",
+    "sub": "real Strands agent",
+    "label": "below"
+   },
+   {
+    "key": "det",
+    "x": 560,
+    "y": 330,
+    "icon": "python",
+    "title": "Deterministic checks",
+    "sub": "tools_used · contains",
+    "label": "below"
+   },
+   {
+    "key": "judge",
+    "x": 560,
+    "y": 480,
+    "icon": "bedrock",
+    "title": "LLM-as-judge",
+    "sub": "{pass, reason}",
+    "label": "below"
+   },
+   {
+    "key": "anthropic",
+    "x": 560,
+    "y": 640,
+    "icon": "bedrock",
+    "title": "Anthropic API",
+    "sub": "claude-opus-4-8 judge",
+    "label": "below"
+   },
+   {
+    "key": "gate",
+    "x": 760,
+    "y": 330,
+    "icon": "shield",
+    "title": "Gate verdict",
+    "sub": "green ships · red blocks",
+    "label": "below"
+   },
+   {
+    "key": "ecr",
+    "x": 760,
+    "y": 480,
+    "icon": "ecr",
+    "title": "ECR image",
+    "sub": "agent published on green",
+    "label": "below"
+   },
+   {
+    "key": "runtime",
+    "x": 930,
+    "y": 330,
+    "icon": "bedrock",
+    "title": "AgentCore Runtime",
+    "sub": "order_triage · Strands loop",
+    "label": "below"
+   },
+   {
+    "key": "spans",
+    "x": 930,
+    "y": 540,
+    "icon": "xray",
+    "title": "gen_ai spans",
+    "sub": "aws/spans · -DEFAULT content",
+    "label": "below"
+   },
+   {
+    "key": "online",
+    "x": 1180,
+    "y": 330,
+    "icon": "bedrock",
+    "title": "Online Evaluations",
+    "sub": "sample 100% · opt-in",
+    "label": "below"
+   },
+   {
+    "key": "evaluators",
+    "x": 1410,
+    "y": 330,
+    "icon": "bedrock",
+    "title": "5 built-in evaluators",
+    "sub": "Correctness · Tool accuracy",
+    "label": "below"
+   },
+   {
+    "key": "results",
+    "x": 1180,
+    "y": 540,
+    "icon": "s3",
+    "title": "Results log group",
+    "sub": "gen_ai.evaluation.result",
+    "label": "below"
+   },
+   {
+    "key": "blocker",
+    "x": 1410,
+    "y": 540,
+    "icon": "alarm",
+    "title": "AgentSpanMapping",
+    "sub": "0 scores · DEFERRED",
+    "label": "below"
+   },
+   {
+    "key": "dash",
+    "x": 1410,
+    "y": 700,
+    "icon": "cloudwatch",
+    "title": "Operations dashboard",
+    "sub": "eval panel · quality note",
+    "label": "below"
+   }
+  ],
+  "groups": [
+   {
+    "label": "OFFLINE — CI eval gate (agent/evals) · GATES deploy",
+    "dashed": true,
+    "nodes": [
+     "dev",
+     "cases",
+     "harness",
+     "agent",
+     "det",
+     "judge",
+     "anthropic",
+     "gate",
+     "ecr"
+    ],
+    "pad": 24
+   },
+   {
+    "label": "SHARED — Runtime trace substrate",
+    "dashed": true,
+    "nodes": [
+     "runtime",
+     "spans"
+    ],
+    "pad": 24
+   },
+   {
+    "label": "ONLINE — AgentCore Online Evaluations · CONTINUOUS · default-off",
+    "dashed": true,
+    "nodes": [
+     "online",
+     "evaluators",
+     "results",
+     "blocker",
+     "dash"
+    ],
+    "pad": 24
+   }
+  ],
+  "edges": [
+   {
+    "s": "dev",
+    "d": "harness",
+    "kind": "req",
+    "label": "pytest run gate",
+    "n": "1",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "cases",
+    "d": "harness",
+    "kind": "sup",
+    "label": "yaml.safe_load",
+    "n": "2",
+    "ss": "t",
+    "ds": "bl",
+    "via": null
+   },
+   {
+    "s": "harness",
+    "d": "agent",
+    "kind": "req",
+    "label": "build_agent(); agent(prompt)",
+    "n": "3",
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "agent",
+    "d": "det",
+    "kind": "req",
+    "label": "response + messages",
+    "n": "4",
+    "ss": "tr",
+    "ds": "bl",
+    "via": null
+   },
+   {
+    "s": "det",
+    "d": "judge",
+    "kind": "req",
+    "label": "if rubric present",
+    "n": "5",
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "judge",
+    "d": "anthropic",
+    "kind": "req",
+    "label": "messages.create ⇄ verdict",
+    "n": "6",
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "det",
+    "d": "gate",
+    "kind": "req",
+    "label": "assert tool",
+    "n": "7",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "judge",
+    "d": "gate",
+    "kind": "req",
+    "label": "assert verdict",
+    "n": "7",
+    "ss": "tr",
+    "ds": "bl",
+    "via": null
+   },
+   {
+    "s": "gate",
+    "d": "ecr",
+    "kind": "req",
+    "label": "green → publish",
+    "n": "8",
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "ecr",
+    "d": "runtime",
+    "kind": "sup",
+    "label": "image ships → deployed",
+    "n": null,
+    "ss": "r",
+    "ds": "bl",
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "spans",
+    "kind": "sup",
+    "label": "emit gen_ai spans",
+    "n": "A",
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "spans",
+    "d": "online",
+    "kind": "req",
+    "label": "sample 100% · by spanId",
+    "n": "B",
+    "ss": "r",
+    "ds": "bl",
+    "via": null
+   },
+   {
+    "s": "online",
+    "d": "evaluators",
+    "kind": "req",
+    "label": "run per trace",
+    "n": "C",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "evaluators",
+    "kind": "sup",
+    "label": "tool spans",
+    "n": null,
+    "ss": "t",
+    "ds": "t",
+    "via": [
+     [
+      930,
+      235
+     ],
+     [
+      1410,
+      235
+     ]
+    ]
+   },
+   {
+    "s": "evaluators",
+    "d": "blocker",
+    "kind": "req",
+    "label": "InvokeModel → parse FAILS",
+    "n": "D",
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "evaluators",
+    "d": "results",
+    "kind": "sup",
+    "label": "result records",
+    "n": "E",
+    "ss": "bl",
+    "ds": "tr",
+    "via": null
+   },
+   {
+    "s": "results",
+    "d": "dash",
+    "kind": "sup",
+    "label": "Logs Insights (planned)",
+    "n": null,
+    "ss": "b",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "blocker",
+    "d": "dash",
+    "kind": "sup",
+    "label": "banner: 0 scores",
+    "n": null,
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   }
+  ],
+  "notes": "Two dashed lanes share the SHARED runtime substrate: OFFLINE gate (numbered 1-8) on the left, ONLINE (A-E) on the right. Faithful to evaluation-architecture.md: the offline pytest gate runs the REAL agent over cases.yaml (deterministic checks then Anthropic judge) and a green gate publishes the image to ECR. The runtime emits gen_ai spans both surfaces read. Online scoring is BLOCKED at AgentSpanMappingException (edge D, alarm icon, 0 scores DEFERRED). The unverified metric-namespace path is folded into prose, not drawn; the Results log group is shown as the real sink, with the dashboard banner reflecting the blocker. The cross-lane \"tool spans → Tool accuracy\" edge is routed above the group labels so it does not collide with them."
+ },
+ {
+  "key": "system-overview",
+  "title": "System overview — order-triage AgentCore",
+  "subtitle": "The whole component map at a glance: Entra CUSTOM_JWT in -> Strands Runtime on Nova Lite -> Cedar-guarded MCP Gateway -> stub Lambdas + OBO into Snowflake, all emitting to CloudWatch",
+  "desc": "Left-to-right AWS component map of the order-triage AgentCore system.",
+  "size": {
+   "w": 1640,
+   "h": 820
+  },
+  "nodes": [
+   {
+    "key": "user",
+    "x": 70,
+    "y": 330,
+    "icon": "user",
+    "title": "Analyst",
+    "sub": "human caller",
+    "label": "below"
+   },
+   {
+    "key": "webapp",
+    "x": 210,
+    "y": 330,
+    "icon": "client",
+    "title": "Application",
+    "sub": "Entra sign-in (browser)",
+    "label": "below"
+   },
+   {
+    "key": "entra",
+    "x": 340,
+    "y": 150,
+    "icon": "entra",
+    "title": "Microsoft Entra ID",
+    "sub": "Users · OBO provider · agent app",
+    "label": "right"
+   },
+   {
+    "key": "runtime",
+    "x": 470,
+    "y": 330,
+    "icon": "bedrock",
+    "title": "AgentCore Runtime",
+    "sub": "Strands · ontology · skills · tools",
+    "label": "below"
+   },
+   {
+    "key": "model",
+    "x": 430,
+    "y": 490,
+    "icon": "bedrock",
+    "title": "Bedrock Nova Lite",
+    "sub": "amazon.nova-lite-v1:0",
+    "label": "below"
+   },
+   {
+    "key": "guard",
+    "x": 430,
+    "y": 640,
+    "icon": "shield",
+    "title": "Bedrock Guardrail",
+    "sub": "PROMPT_ATTACK filter",
+    "label": "below"
+   },
+   {
+    "key": "memory",
+    "x": 640,
+    "y": 490,
+    "icon": "db",
+    "title": "AgentCore Memory",
+    "sub": "short + long-term · per-user",
+    "label": "below"
+   },
+   {
+    "key": "kb",
+    "x": 640,
+    "y": 640,
+    "icon": "s3",
+    "title": "Knowledge Base",
+    "sub": "Titan v2 · S3 Vectors",
+    "label": "below"
+   },
+   {
+    "key": "gateway",
+    "x": 720,
+    "y": 330,
+    "icon": "apigw",
+    "title": "AgentCore Gateway",
+    "sub": "MCP · Cedar ENFORCE · OBO broker",
+    "label": "below"
+   },
+   {
+    "key": "sap",
+    "x": 1000,
+    "y": 222,
+    "icon": "lambda",
+    "title": "SAP credit",
+    "sub": "SigV4 · AWS_IAM",
+    "label": "below"
+   },
+   {
+    "key": "orders",
+    "x": 1000,
+    "y": 330,
+    "icon": "lambda",
+    "title": "order-actions",
+    "sub": "SigV4 · flagOrder",
+    "label": "below"
+   },
+   {
+    "key": "snowl",
+    "x": 1000,
+    "y": 438,
+    "icon": "lambda",
+    "title": "snowflake-query",
+    "sub": "OBO Bearer | KEYPAIR_JWT",
+    "label": "below"
+   },
+   {
+    "key": "secrets",
+    "x": 1000,
+    "y": 640,
+    "icon": "secrets",
+    "title": "Secrets Manager",
+    "sub": "RSA key · OBO secret",
+    "label": "below"
+   },
+   {
+    "key": "snowflake",
+    "x": 1320,
+    "y": 438,
+    "icon": "snowflake",
+    "title": "Snowflake",
+    "sub": "EXTERNAL_OAUTH · RLS · tables",
+    "label": "below"
+   },
+   {
+    "key": "cw",
+    "x": 1450,
+    "y": 150,
+    "icon": "cloudwatch",
+    "title": "CloudWatch",
+    "sub": "logs · X-Ray · dashboards · SNS · SLO",
+    "label": "below"
+   }
+  ],
+  "groups": [
+   {
+    "label": "AWS Cloud · us-west-2",
+    "dashed": false,
+    "nodes": [
+     "runtime",
+     "model",
+     "guard",
+     "memory",
+     "kb",
+     "gateway",
+     "sap",
+     "orders",
+     "snowl",
+     "secrets",
+     "cw"
+    ],
+    "pad": 34
+   },
+   {
+    "label": "AWS Lambda · arm64 · Function URLs",
+    "dashed": true,
+    "nodes": [
+     "sap",
+     "orders",
+     "snowl"
+    ],
+    "pad": 20
+   },
+   {
+    "label": "Observability · control plane",
+    "dashed": true,
+    "nodes": [
+     "cw"
+    ],
+    "pad": 18
+   }
+  ],
+  "edges": [
+   {
+    "s": "user",
+    "d": "webapp",
+    "kind": "req",
+    "label": "sign in",
+    "n": "1",
+    "ss": null,
+    "ds": null,
+    "via": null
+   },
+   {
+    "s": "entra",
+    "d": "webapp",
+    "kind": "id",
+    "label": "user access token (CUSTOM_JWT)",
+    "n": "2",
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "webapp",
+    "d": "runtime",
+    "kind": "req",
+    "label": "InvokeAgentRuntime (Bearer JWT)",
+    "n": "3",
+    "ss": null,
+    "ds": null,
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "model",
+    "kind": "req",
+    "label": "ConverseStream",
+    "n": "4",
+    "ss": "bl",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "model",
+    "d": "guard",
+    "kind": "req",
+    "label": "guardrailConfig",
+    "n": null,
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "memory",
+    "kind": "sup",
+    "label": "read / write context",
+    "n": null,
+    "ss": "br",
+    "ds": "tl",
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "kb",
+    "kind": "sup",
+    "label": "Retrieve policies",
+    "n": null,
+    "ss": "b",
+    "ds": "tl",
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "gateway",
+    "kind": "req",
+    "label": "MCP tool calls (+ user JWT)",
+    "n": "5",
+    "ss": null,
+    "ds": null,
+    "via": null
+   },
+   {
+    "s": "gateway",
+    "d": "entra",
+    "kind": "id",
+    "label": "OBO token exchange (per-user)",
+    "n": null,
+    "ss": "t",
+    "ds": "t",
+    "via": [
+     [
+      720,
+      100
+     ],
+     [
+      340,
+      100
+     ]
+    ]
+   },
+   {
+    "s": "gateway",
+    "d": "sap",
+    "kind": "req",
+    "label": "SigV4",
+    "n": "6a",
+    "ss": "tr",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "gateway",
+    "d": "orders",
+    "kind": "req",
+    "label": "SigV4",
+    "n": "6b",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "gateway",
+    "d": "snowl",
+    "kind": "req",
+    "label": "OBO Bearer",
+    "n": "6c",
+    "ss": "br",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "snowl",
+    "d": "snowflake",
+    "kind": "req",
+    "label": "OAUTH → as the user · RLS",
+    "n": "7",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "snowl",
+    "d": "secrets",
+    "kind": "sup",
+    "label": "reads key + config",
+    "n": null,
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "cw",
+    "kind": "sup",
+    "label": "logs · token EMF · traces",
+    "n": null,
+    "ss": "t",
+    "ds": "l",
+    "via": [
+     [
+      470,
+      118
+     ],
+     [
+      1300,
+      118
+     ]
+    ]
+   },
+   {
+    "s": "gateway",
+    "d": "cw",
+    "kind": "sup",
+    "label": "logs · traces",
+    "n": null,
+    "ss": "t",
+    "ds": "b",
+    "via": [
+     [
+      720,
+      128
+     ],
+     [
+      1450,
+      128
+     ]
+    ]
+   }
+  ],
+  "notes": "Hero map of the whole system: every major component is one icon with its parts folded into the sub-line. Main request spine numbered 1..7 with a 6a/6b/6c fan-out at the Gateway (SigV4 for SAP/orders, OBO Bearer for snowflake). KB and Memory are supporting reads off the Runtime; the Guardrail hangs off the model path (async PROMPT_ATTACK filter); Secrets Manager backs the snowflake-query Lambda. CloudWatch is the grey control plane — Runtime and Gateway telemetry route along the top band above the Lambda cluster so no edge crosses a node. The OBO token-exchange identity edge loops across the very top to Entra, matching the security plane. Faithful to docs/architecture.md: model is Nova Lite (overrides the agent's claude-opus default), OBO is Gateway-brokered (agent carries no OBO code), snowflake-query has the two-path OBO|KEYPAIR_JWT auth."
+ }
+]

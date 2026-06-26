@@ -1,0 +1,11 @@
+flowchart LR
+  classDef ours fill:#e6f4ea,stroke:#137333,color:#0b5394;
+  classDef aws fill:#fff3e0,stroke:#e8710a,color:#5f4100;
+  classDef fail fill:#fce8e6,stroke:#c5221f,color:#b71c1c;
+
+  A["<b>Strands 1.44 agent</b><br/>(AgentCore Runtime)<br/>emits gen_ai content in the<br/>OTel v1.37 'parts' shape<br/>(under gen_ai_latest_experimental)"]:::ours
+  B["<b>AgentCore delivery layer</b><br/>writes per-span content, but<br/>RE-WRAPS input.messages<br/>inconsistently:<br/>system = 'parts'<br/>user = [role, content] aggregate"]:::aws
+  C{"<b>AgentCore Evaluations</b><br/>span to eval mapper<br/>tries to parse user_query<br/>(expects flat content)"}:::aws
+  D["<b>AgentSpanMappingException</b><br/>'Failed to parse user_query'<br/>scope: strands.telemetry.tracer<br/><br/><b>0 scores</b> - all 5 Builtin evaluators"]:::fail
+
+  A --> B --> C --> D

@@ -1,0 +1,35 @@
+name: stubs · CI
+
+# Lint + hermetic FastAPI TestClient tests + a Lambda-zip packaging check.
+# Path-filtered to stubs/.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "stubs/**"
+      - ".github/workflows/stubs-ci.yml"
+  pull_request:
+    paths:
+      - "stubs/**"
+      - ".github/workflows/stubs-ci.yml"
+
+defaults:
+  run:
+    working-directory: stubs
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: false
+      - run: uv sync --extra dev
+      - name: Lint
+        run: uv run ruff check .
+      - name: Test (FastAPI TestClient)
+        run: uv run pytest -q
+      - name: Build Lambda zips (validates packaging)
+        run: ./build_lambdas.sh

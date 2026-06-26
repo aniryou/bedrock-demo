@@ -1,0 +1,509 @@
+{
+  "coverage": {
+    "actionsWithoutGoverningSkill": [],
+    "entitiesWithoutSkillOrKb": [
+      "BasisCurve",
+      "BeanLot",
+      "BeanPurchaseContract",
+      "BlendComponent",
+      "CallOff",
+      "Contract",
+      "CoverPolicy",
+      "CropSdView",
+      "CustomerGroup",
+      "CustomerNotification",
+      "DecisionRecord",
+      "DemandPlan",
+      "DemandToBeanRequirement",
+      "DocumentDocket",
+      "Escalation",
+      "Exception",
+      "FtsOpportunity",
+      "Invoice",
+      "Offer",
+      "OptimizerScenario",
+      "Origin",
+      "Plant",
+      "ProcessOrder",
+      "ProcurementPlan",
+      "Product",
+      "ProductionLine",
+      "ProductionPlan",
+      "PurchaseOrder",
+      "QualityClearance",
+      "Recipe",
+      "ShipTo",
+      "Shipment",
+      "Supplier",
+      "Warehouse",
+      "YieldRecord"
+    ],
+    "skillsBoundToNothing": [],
+    "skillsReadingUnstubbedDatasources": {
+      "allocate_stock_to_order": [
+        "sap_stock"
+      ],
+      "handle_credit_override": [
+        "pluto"
+      ]
+    }
+  },
+  "generatedFrom": {
+    "kbDocs": 3,
+    "ontologyVersion": "0.5.0",
+    "skills": 6,
+    "title": "Agro-Commodity Supply Chain Ontology"
+  },
+  "index": {
+    "action": {
+      "allocateStockToOrder": {
+        "governedBySkills": [
+          "allocate_stock_to_order"
+        ],
+        "invokedBySkills": [
+          "allocate_stock_to_order"
+        ],
+        "targetObjectType": "SalesOrder"
+      },
+      "approveCreditLimit": {
+        "governedBySkills": [
+          "credit_hold",
+          "handle_credit_override",
+          "high_value_review"
+        ],
+        "invokedBySkills": [
+          "handle_credit_override"
+        ],
+        "targetObjectType": "CreditProfile"
+      },
+      "raiseException": {
+        "governedBySkills": [
+          "credit_hold",
+          "dispute_triage",
+          "high_value_review"
+        ],
+        "invokedBySkills": [
+          "credit_hold",
+          "dispute_triage",
+          "handle_credit_override",
+          "high_value_review"
+        ],
+        "targetObjectType": "Exception"
+      }
+    },
+    "linkType": {
+      "customerHasCredit": {
+        "kb": [],
+        "skills": [
+          "credit_hold",
+          "handle_credit_override"
+        ]
+      },
+      "deliveryRaisesDispute": {
+        "kb": [],
+        "skills": [
+          "dispute_triage"
+        ]
+      },
+      "salesOrderAllocatedFromStock": {
+        "kb": [],
+        "skills": [
+          "allocate_stock_to_order"
+        ]
+      },
+      "salesOrderPrioritisedByProfile": {
+        "kb": [],
+        "skills": [
+          "high_value_review"
+        ]
+      }
+    },
+    "objectType": {
+      "CreditProfile": {
+        "actions": [
+          "approveCreditLimit"
+        ],
+        "kb": [
+          "kb_credit_policy",
+          "kb_credit_policy#c01",
+          "kb_credit_policy#c12",
+          "kb_credit_policy#c20",
+          "kb_order_review_policy"
+        ],
+        "skills": [
+          "credit_hold",
+          "handle_credit_override",
+          "high_value_review"
+        ],
+        "skillsViaLink": [
+          "credit_hold",
+          "handle_credit_override"
+        ]
+      },
+      "Customer": {
+        "actions": [],
+        "kb": [
+          "kb_credit_policy"
+        ],
+        "skills": [],
+        "skillsViaLink": [
+          "credit_hold",
+          "handle_credit_override"
+        ]
+      },
+      "CustomerProfile": {
+        "actions": [],
+        "kb": [
+          "kb_credit_policy#c20"
+        ],
+        "skills": [
+          "credit_hold",
+          "handle_credit_override",
+          "high_value_review"
+        ],
+        "skillsViaLink": [
+          "high_value_review"
+        ]
+      },
+      "DeliveryOrder": {
+        "actions": [],
+        "kb": [],
+        "skills": [
+          "dispute_triage"
+        ],
+        "skillsViaLink": [
+          "dispute_triage"
+        ]
+      },
+      "Dispute": {
+        "actions": [],
+        "kb": [
+          "kb_dispute_policy"
+        ],
+        "skills": [
+          "dispute_triage"
+        ],
+        "skillsViaLink": [
+          "dispute_triage"
+        ]
+      },
+      "Exception": {
+        "actions": [
+          "raiseException"
+        ],
+        "kb": [],
+        "skills": [],
+        "skillsViaLink": []
+      },
+      "SalesOrder": {
+        "actions": [
+          "allocateStockToOrder"
+        ],
+        "kb": [
+          "kb_dispute_policy",
+          "kb_order_review_policy"
+        ],
+        "skills": [
+          "dispute_triage",
+          "high_value_review"
+        ],
+        "skillsViaLink": [
+          "allocate_stock_to_order",
+          "high_value_review"
+        ]
+      },
+      "StockPosition": {
+        "actions": [],
+        "kb": [],
+        "skills": [],
+        "skillsViaLink": [
+          "allocate_stock_to_order"
+        ]
+      }
+    }
+  },
+  "kb": [
+    {
+      "apiName": "kb_credit_policy",
+      "chunks": [
+        {
+          "concerns": {
+            "objectTypes": [
+              "CreditProfile"
+            ]
+          },
+          "heading": "Standard terms and limits",
+          "id": "c01"
+        },
+        {
+          "concerns": {
+            "objectTypes": [
+              "CreditProfile"
+            ],
+            "properties": [
+              "CreditProfile.exposure"
+            ]
+          },
+          "heading": "Collateral for high-risk markets",
+          "id": "c12"
+        },
+        {
+          "concerns": {
+            "objectTypes": [
+              "CreditProfile",
+              "CustomerProfile"
+            ]
+          },
+          "heading": "Committee override process",
+          "id": "c20"
+        }
+      ],
+      "concerns": {
+        "objectTypes": [
+          "CreditProfile",
+          "Customer"
+        ],
+        "properties": [
+          "CreditProfile.terms",
+          "CreditProfile.exposure"
+        ]
+      },
+      "path": "kb/credit-policy.md",
+      "provenance": {
+        "retrievedAt": "2026-01-15",
+        "uri": "internal://policies/credit",
+        "version": "4.2"
+      },
+      "title": "Customer Credit Policy"
+    },
+    {
+      "apiName": "kb_dispute_policy",
+      "concerns": {
+        "objectTypes": [
+          "SalesOrder",
+          "Dispute"
+        ]
+      },
+      "path": "kb/dispute-policy.md",
+      "provenance": {
+        "retrievedAt": "2026-06-21",
+        "uri": "internal://policies/dispute",
+        "version": "1.0"
+      },
+      "title": "Dispute and Cancellation Policy"
+    },
+    {
+      "apiName": "kb_order_review_policy",
+      "concerns": {
+        "objectTypes": [
+          "SalesOrder",
+          "CreditProfile"
+        ]
+      },
+      "path": "kb/order-review-policy.md",
+      "provenance": {
+        "retrievedAt": "2026-06-21",
+        "uri": "internal://policies/order-review",
+        "version": "1.0"
+      },
+      "title": "Order Review Policy"
+    }
+  ],
+  "skills": [
+    {
+      "_file": "skills/examples/allocate_stock_to_order.skill.yaml",
+      "apiName": "allocate_stock_to_order",
+      "appliesTo": {
+        "actions": [
+          "allocateStockToOrder"
+        ],
+        "linkTypes": [
+          "salesOrderAllocatedFromStock"
+        ]
+      },
+      "appliesToExpandedObjectTypes": [
+        "SalesOrder",
+        "StockPosition"
+      ],
+      "description": "Procedure for allocating available stock to a sales order, respecting the regional rule that unrestricted stock must exist before a delivery order is created (US).\n",
+      "displayName": "Allocate stock to a sales order",
+      "invokes": [
+        "allocateStockToOrder"
+      ],
+      "reads": {
+        "datasources": [
+          "sap",
+          "sap_stock"
+        ],
+        "objectTypes": [
+          "SalesOrder",
+          "StockPosition",
+          "DeliveryOrder"
+        ]
+      },
+      "version": 1
+    },
+    {
+      "_file": "skills/credit_hold.skill.md",
+      "apiName": "credit_hold",
+      "appliesTo": {
+        "actions": [
+          "approveCreditLimit",
+          "raiseException"
+        ],
+        "linkTypes": [
+          "customerHasCredit"
+        ],
+        "objectTypes": [
+          "CreditProfile",
+          "CustomerProfile"
+        ]
+      },
+      "appliesToExpandedObjectTypes": [
+        "CreditProfile",
+        "Customer",
+        "CustomerProfile"
+      ],
+      "description": "Use when a customer may be over their credit limit or the request mentions credit, SAP, or holds.\n",
+      "displayName": "Credit hold",
+      "invokes": [
+        "raiseException"
+      ],
+      "reads": {
+        "datasources": [
+          "sap"
+        ],
+        "objectTypes": [
+          "CreditProfile",
+          "CustomerProfile",
+          "SalesOrder"
+        ]
+      },
+      "version": 1
+    },
+    {
+      "_file": "skills/dispute_triage.skill.md",
+      "apiName": "dispute_triage",
+      "appliesTo": {
+        "actions": [
+          "raiseException"
+        ],
+        "linkTypes": [
+          "deliveryRaisesDispute"
+        ],
+        "objectTypes": [
+          "Dispute",
+          "SalesOrder",
+          "DeliveryOrder"
+        ]
+      },
+      "appliesToExpandedObjectTypes": [
+        "DeliveryOrder",
+        "Dispute",
+        "SalesOrder"
+      ],
+      "description": "Use when a customer disputes an order or asks about cancellations, refunds, or returns.\n",
+      "displayName": "Dispute triage",
+      "invokes": [
+        "raiseException"
+      ],
+      "reads": {
+        "datasources": [
+          "sap"
+        ],
+        "objectTypes": [
+          "Dispute",
+          "SalesOrder",
+          "DeliveryOrder"
+        ]
+      },
+      "version": 1
+    },
+    {
+      "_file": "skills/examples/handle_credit_override.skill.yaml",
+      "apiName": "handle_credit_override",
+      "appliesTo": {
+        "actions": [
+          "approveCreditLimit"
+        ],
+        "linkTypes": [
+          "customerHasCredit"
+        ],
+        "objectTypes": [
+          "CreditProfile",
+          "CustomerProfile"
+        ]
+      },
+      "appliesToExpandedObjectTypes": [
+        "CreditProfile",
+        "Customer",
+        "CustomerProfile"
+      ],
+      "description": "How to weigh a borderline credit-override request: what to verify and in what order before approving above the limit or after a recent default, and when to route to committee instead.\n",
+      "displayName": "Handle credit override",
+      "invokes": [
+        "approveCreditLimit",
+        "raiseException"
+      ],
+      "reads": {
+        "datasources": [
+          "pluto"
+        ],
+        "objectTypes": [
+          "CreditProfile",
+          "CustomerProfile",
+          "Exception"
+        ]
+      },
+      "version": 3
+    },
+    {
+      "_file": "skills/high_value_review.skill.md",
+      "apiName": "high_value_review",
+      "appliesTo": {
+        "actions": [
+          "raiseException",
+          "approveCreditLimit"
+        ],
+        "linkTypes": [
+          "salesOrderPrioritisedByProfile"
+        ],
+        "objectTypes": [
+          "SalesOrder",
+          "CreditProfile",
+          "CustomerProfile"
+        ]
+      },
+      "appliesToExpandedObjectTypes": [
+        "CreditProfile",
+        "CustomerProfile",
+        "SalesOrder"
+      ],
+      "description": "Use when an order is large relative to the customer's credit limit, or any partner order at/above $100k.\n",
+      "displayName": "High-value review",
+      "invokes": [
+        "raiseException"
+      ],
+      "reads": {
+        "datasources": [
+          "sap"
+        ],
+        "objectTypes": [
+          "SalesOrder",
+          "CreditProfile",
+          "CustomerProfile"
+        ]
+      },
+      "version": 1
+    },
+    {
+      "_file": "skills/using_the_knowledge_layer.skill.md",
+      "apiName": "using_the_knowledge_layer",
+      "appliesToExpandedObjectTypes": [],
+      "description": "Foundational doctrine: what the ontology, skills, and knowledge base are and how to use them together. Pre-loaded into every agent's prompt.\n",
+      "displayName": "Using the knowledge layer",
+      "preload": true,
+      "version": 1
+    }
+  ]
+}

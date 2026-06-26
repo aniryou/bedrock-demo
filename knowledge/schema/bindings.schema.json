@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/bindings.schema.json",
+  "title": "Skill and KB bindings",
+  "description": "Shapes for skill manifests (skills/*.skill.md frontmatter — the agent-consumed form — and skills/examples/*.skill.yaml) and the KB registry (kb/index.yaml). References point INTO the ontology by apiName; build/bindings.py resolves them.",
+  "$defs": {
+    "apiName":   { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$" },
+    "dottedRef": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*\\.[A-Za-z][A-Za-z0-9_]*$",
+                   "description": "Property reference: ObjectType.property" },
+
+    "refSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A grouped set of ontology references. Every entry is resolved against the compiled ontology.",
+      "properties": {
+        "objectTypes": { "type": "array", "items": { "$ref": "#/$defs/apiName" } },
+        "linkTypes":   { "type": "array", "items": { "$ref": "#/$defs/apiName" } },
+        "actions":     { "type": "array", "items": { "$ref": "#/$defs/apiName" } },
+        "datasources": { "type": "array", "items": { "$ref": "#/$defs/apiName" } },
+        "properties":  { "type": "array", "items": { "$ref": "#/$defs/dottedRef" } }
+      }
+    },
+
+    "skill": {
+      "type": "object",
+      "required": ["apiName"],
+      "additionalProperties": false,
+      "description": "A curated, versioned procedure. `appliesTo` is its structural trigger (required unless `preload`); `invokes` and `reads` are its mutation and read footprint. A `preload` skill is foundational doctrine the agent injects into its system prompt at startup, so it is not entity-triggered and needs no appliesTo.",
+      "properties": {
+        "apiName":     { "$ref": "#/$defs/apiName" },
+        "displayName": { "type": "string" },
+        "version":     { "type": "integer", "minimum": 1 },
+        "description": { "type": "string" },
+        "preload":     { "type": "boolean",
+                         "description": "If true, the agent injects this skill's body into the system prompt at startup (foundational, always-on doctrine) instead of lazy-loading it via load_skill. Such skills are not entity-triggered, so appliesTo is not required." },
+        "appliesTo":   { "$ref": "#/$defs/refSet" },
+        "invokes":     { "type": "array", "items": { "$ref": "#/$defs/apiName" },
+                         "description": "Action apiNames the skill may call." },
+        "reads":       { "$ref": "#/$defs/refSet" }
+      },
+      "allOf": [
+        {
+          "if":   { "properties": { "preload": { "const": true } }, "required": ["preload"] },
+          "then": true,
+          "else": { "required": ["appliesTo"] }
+        }
+      ]
+    },
+
+    "kbChunk": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id":       { "type": "string" },
+        "heading":  { "type": "string" },
+        "concerns": { "$ref": "#/$defs/refSet" }
+      }
+    },
+
+    "kbDoc": {
+      "type": "object",
+      "required": ["apiName", "path"],
+      "additionalProperties": false,
+      "description": "A KB document. `concerns` scopes retrieval; tag at the chunk level where you can.",
+      "properties": {
+        "apiName":    { "$ref": "#/$defs/apiName" },
+        "title":      { "type": "string" },
+        "path":       { "type": "string", "description": "Path to the document, relative to the repo root. Must exist." },
+        "provenance": { "type": "object", "additionalProperties": true,
+                        "description": "uri / version / retrievedAt etc." },
+        "concerns":   { "$ref": "#/$defs/refSet" },
+        "chunks":     { "type": "array", "items": { "$ref": "#/$defs/kbChunk" } }
+      }
+    },
+
+    "kbIndex": {
+      "type": "object",
+      "required": ["kb"],
+      "additionalProperties": false,
+      "properties": {
+        "kb": { "type": "array", "items": { "$ref": "#/$defs/kbDoc" } }
+      }
+    }
+  }
+}

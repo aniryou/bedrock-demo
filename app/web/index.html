@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order Triage — OBO demo</title>
+  <style>
+    :root { --bg:#0f1117; --panel:#171a23; --ink:#e7e9ee; --muted:#9aa3b2;
+            --user:#7c5cff; --agent:#3a8; --line:#262b38; --accent:#5b8cff; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink);
+           font:15px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+    header { display:flex; align-items:center; gap:12px; padding:12px 18px;
+             border-bottom:1px solid var(--line); background:var(--panel); }
+    header h1 { font-size:15px; margin:0; font-weight:600; }
+    header .who { margin-left:auto; color:var(--muted); font-size:13px; }
+    header button, .signin { background:var(--accent); color:#fff; border:0;
+            border-radius:7px; padding:7px 13px; font-size:13px; cursor:pointer; }
+    header .ghost { background:transparent; color:var(--muted); border:1px solid var(--line); }
+    main { max-width:820px; margin:0 auto; padding:18px; }
+    #log { display:flex; flex-direction:column; gap:14px; min-height:50vh; }
+    .msg { padding:11px 14px; border-radius:10px; max-width:88%; white-space:pre-wrap; }
+    .me { align-self:flex-end; background:#23314f; }
+    .bot { align-self:flex-start; background:var(--panel); border:1px solid var(--line); }
+    form { display:flex; gap:10px; margin-top:16px; }
+    #q { flex:1; background:var(--panel); color:var(--ink); border:1px solid var(--line);
+         border-radius:9px; padding:11px 13px; font-size:14px; }
+    form button { background:var(--accent); color:#fff; border:0; border-radius:9px;
+                  padding:0 18px; font-size:14px; cursor:pointer; }
+    form button:disabled { opacity:.5; cursor:default; }
+    .hint { color:var(--muted); font-size:13px; margin:10px 0; }
+    .hint code { background:#222838; padding:1px 6px; border-radius:5px; }
+    .err { color:#ff8086; }
+    .examples { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 2px; }
+    .examples button { background:transparent; color:var(--accent); border:1px solid var(--line);
+                       border-radius:7px; padding:5px 10px; font-size:12.5px; cursor:pointer; }
+
+    /* ── response streaming + formatting + animation ─────────────────────── */
+    .msg { animation: rise .22s ease both; }
+    @keyframes rise { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+
+    /* Claude-Code-style "working" line, shown until the first token lands. */
+    .working { display:flex; align-items:center; gap:9px; color:var(--muted); font-size:13px; }
+    .working .star { color:var(--accent); width:1em; text-align:center; font-size:14px;
+                     filter:drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 55%, transparent)); }
+    .working .label { color:var(--ink); opacity:.85; }
+    .working .dots { display:inline-flex; gap:3px; }
+    .working .dots i { width:4px; height:4px; border-radius:50%; background:currentColor; opacity:.3;
+                       animation:bounce 1.2s ease-in-out infinite; }
+    .working .dots i:nth-child(2){ animation-delay:.16s; } .working .dots i:nth-child(3){ animation-delay:.32s; }
+    @keyframes bounce { 0%,80%,100%{ opacity:.25; transform:translateY(0); } 40%{ opacity:1; transform:translateY(-3px); } }
+    .working .elapsed { margin-left:2px; font-variant-numeric:tabular-nums; opacity:.6; }
+
+    /* The bot bubble now renders markdown, so drop the raw pre-wrap whitespace. */
+    .bot .md { white-space:normal; }
+    .bot.streaming { border-color: color-mix(in srgb, var(--accent) 32%, var(--line)); }
+    /* Blinking caret trailing the streamed text. */
+    .cursor { display:inline-block; width:7px; height:1.05em; vertical-align:-2px; margin-left:1px;
+              border-radius:2px; background:var(--accent); animation:blink 1.05s steps(2,start) infinite; }
+    @keyframes blink { 50% { opacity:0; } }
+
+    /* Markdown rendering — tuned to the existing dark palette. */
+    .md > :first-child { margin-top:0; } .md > :last-child { margin-bottom:0; }
+    .md p { margin:0 0 10px; }
+    .md h1,.md h2,.md h3,.md h4 { margin:15px 0 8px; line-height:1.3; font-weight:600; color:#f1f3f8; }
+    .md h1 { font-size:18px; } .md h2 { font-size:16px; } .md h3 { font-size:14.5px; } .md h4 { font-size:13.5px; }
+    .md ul,.md ol { margin:6px 0 11px; padding-left:21px; }
+    .md li { margin:3px 0; } .md li::marker { color:var(--muted); }
+    .md strong { font-weight:650; color:#f3f5fa; } .md em { font-style:italic; }
+    .md code { background:#222838; border:1px solid var(--line); border-radius:5px; padding:1px 5px;
+               font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+    .md pre.code { background:#0b0d14; border:1px solid var(--line); border-radius:9px;
+                   padding:11px 13px; overflow:auto; margin:9px 0 12px; }
+    .md pre.code code { background:none; border:0; padding:0; color:#cdd6e6; display:block; line-height:1.55; }
+    .md a { color:var(--accent); text-decoration:none;
+            border-bottom:1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+    .md a:hover { border-bottom-color:var(--accent); }
+    .md blockquote { margin:8px 0; padding:2px 12px; border-left:3px solid var(--line); color:var(--muted); }
+    .md hr { border:0; border-top:1px solid var(--line); margin:13px 0; }
+
+    /* ── agent-step timeline: an auditable trace of reasoning + tool calls ── */
+    .timeline { display:flex; flex-direction:column; }
+    .timeline:not(:empty) { margin:3px 0 12px; }
+    .tl { position:relative; padding:0 0 11px 22px; font-size:13px; animation:rise .2s ease both; }
+    .tl:last-child { padding-bottom:0; }
+    .tl::before { content:""; position:absolute; left:5px; top:3px; bottom:0; width:2px; background:var(--line); }
+    .tl:last-child::before { bottom:auto; height:12px; }
+    .tl::after { content:""; position:absolute; left:1px; top:4px; width:9px; height:9px; border-radius:50%;
+                 background:var(--panel); border:2px solid var(--line); }
+    .tl-reason { color:var(--muted); line-height:1.55; }
+    /* The final answer — shown as-is, full markdown, with an accent dot to mark the conclusion. */
+    .tl-answer { color:var(--ink); font-size:14px; }
+    .tl-answer::after { background:var(--agent); border-color:var(--agent); }
+    /* Thinking — reasoning + intermediate narration, collapsed by default behind a muted head. */
+    .tl-think::after { background:var(--panel); border-color:var(--line); }
+    .tl-think .tl-ico { color:var(--muted); opacity:.85; }
+    .tl-think .tl-name { color:var(--muted); font-weight:600; }
+    .tl-think-prev { color:var(--muted); opacity:.65; font-size:12px; min-width:0; flex:0 1 auto;
+                     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .tl-res.tl-think-body { white-space:normal; color:var(--muted); font-size:12.5px; }
+    .tl-tool::after { border-color:color-mix(in srgb, var(--accent) 60%, var(--line)); background:#0e1320; }
+    .tl-head { display:flex; flex-wrap:wrap; gap:7px; align-items:baseline; }
+    /* Collapsible tool/KB result: <summary> head toggles the body, hidden by default. */
+    summary.tl-head { list-style:none; cursor:pointer; border-radius:6px; padding:1px 4px; margin-left:-4px;
+                      -webkit-tap-highlight-color:transparent; }
+    summary.tl-head::-webkit-details-marker { display:none; }
+    summary.tl-head:hover { background:color-mix(in srgb, var(--accent) 9%, transparent); }
+    .tl-caret { color:var(--muted); font-size:9px; line-height:1; transition:transform .15s ease; }
+    .tl-d[open] > summary .tl-caret { transform:rotate(90deg); }
+    .tl-ico { font-size:12px; }
+    .tl-name { font-weight:600; color:var(--ink); }
+    .tl-args { font:11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:var(--muted);
+               background:#1b212f; border:1px solid var(--line); border-radius:5px; padding:1px 7px; }
+    .tl-res { margin-top:5px; font-size:12px; line-height:1.5; white-space:pre-wrap;
+              padding-left:11px; border-left:2px solid var(--line); }
+    .tl-res.success { color:#86d8b0; border-color:color-mix(in srgb, #3a8 55%, var(--line)); }
+    .tl-res.error   { color:#ff8086; border-color:color-mix(in srgb, #ff8086 55%, var(--line)); }
+    .tl-res.pending { color:var(--muted); font-style:italic; }
+
+    /* Tabular tool results — JSON arrays/objects rendered as compact tables
+       instead of a raw-JSON wall. (Must follow `.tl-res.success` to win on color.) */
+    .tl-res.tbl-res { white-space:normal; color:var(--ink); padding-left:11px; }
+    .tbl-wrap { overflow-x:auto; max-width:100%; margin:2px 0 1px;
+                border:1px solid var(--line); border-radius:7px; }
+    table.tbl { border-collapse:collapse; width:100%;
+                font:11.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+    table.tbl th, table.tbl td { padding:4px 10px; text-align:left; white-space:nowrap;
+                border-bottom:1px solid var(--line); }
+    table.tbl thead th { background:#1b212f; color:var(--muted); font-weight:600; font-size:11px; }
+    table.tbl tbody tr:last-child td { border-bottom:0; }
+    table.tbl tbody tr:hover { background:rgba(255,255,255,.025); }
+    table.tbl .num { text-align:right; font-variant-numeric:tabular-nums; }
+    table.tbl.kv th { background:#1b212f; color:var(--muted); font-weight:600;
+                border-right:1px solid var(--line); width:1%; }
+    table.tbl .b-true { color:#86d8b0; } table.tbl .b-false { color:var(--muted); }
+    table.tbl .nul { color:var(--muted); }
+
+    /* Knowledge-base policy results — markdown chunks rendered as source-labelled cards. */
+    .tl-res.kb-res { white-space:normal; color:var(--ink); padding-left:11px; }
+    .kb-doc { margin:2px 0 10px; } .kb-doc:last-child { margin-bottom:1px; }
+    .kb-src { display:inline-flex; align-items:center; gap:6px; margin-bottom:5px;
+              font:11.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:var(--muted);
+              background:#1b212f; border:1px solid var(--line); border-radius:6px; padding:2px 8px; }
+    .kb-src .kb-ico { font-size:11px; }
+    .kb-body { font-size:12.5px; }
+    .kb-body > :first-child { margin-top:0; } .kb-body > :last-child { margin-bottom:0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🔐 Order Triage — on-behalf-of demo</h1>
+    <span class="who" id="who">…</span>
+    <span id="authbtns"></span>
+  </header>
+  <main>
+    <div class="hint" id="banner"></div>
+    <div class="examples" id="examples" style="display:none">
+      <button data-q="Triage order O-1003: give it a brief risk summary.">Triage O-1003 (order → you)</button>
+      <button data-q="What tier and region is customer C-001 (Acme)?">Look up customer C-001 (agent)</button>
+      <button data-q="List the open partner orders.">List open partner orders</button>
+    </div>
+    <div id="log"></div>
+    <form id="f">
+      <input id="q" placeholder="Ask about an order or a customer…" autocomplete="off" />
+      <button id="send" type="submit">Send</button>
+    </form>
+  </main>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const log = $("#log");
+    let authed = false;
+
+    function el(cls, text) { const d = document.createElement("div"); d.className = cls; if (text!=null) d.textContent = text; return d; }
+
+    // Keep the latest content in view while streaming — but only if the user is
+    // already near the bottom, so we never yank them away while they read up.
+    const nearBottom = () => (window.innerHeight + window.scrollY) >= document.body.scrollHeight - 140;
+    const scrollDown = (force) => { if (force || nearBottom()) window.scrollTo(0, document.body.scrollHeight); };
+
+    // ── Minimal, safe markdown → HTML (escape first, then format) ──────────
+    const ESC = { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" };
+    const escapeHtml = (s) => (s == null ? "" : String(s)).replace(/[&<>"]/g, (c) => ESC[c]);
+    function safeUrl(u) {
+      u = (u || "").trim();   // allow http(s)/mailto/anchor + site-relative /path, but NOT protocol-relative //host
+      return /^(https?:|mailto:|#|\/(?!\/))/i.test(u) ? u : null;  // block javascript:, data:, //evil.com, etc.
+    }
+    function renderInline(s) {                  // s is already HTML-escaped
+      // Split on inline code spans (odd indices = code) so formatting never touches code.
+      return s.split(/`([^`]+)`/).map((part, i) => {
+        if (i % 2 === 1) return `<code>${part}</code>`;
+        // Emphasis runs BEFORE links, so the emphasis passes can never rewrite a generated
+        // href/target attribute (otherwise the `_` in target="_blank" would pair into a stray <em>).
+        const t = part
+          .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/__([^_]+)__/g, "<strong>$1</strong>")
+          .replace(/(^|[^*\w])\*(\S[^*\n]*?\S|\S)\*/g, "$1<em>$2</em>")   // non-space inside → no `a * b` false hits
+          .replace(/(^|[^_\w])_(\S[^_\n]*?\S|\S)_/g, "$1<em>$2</em>");
+        // Bounded char classes keep the link scan linear on degenerate bracket-heavy input.
+        return t.includes("](") ? t.replace(/\[([^\]\n]{1,200})\]\(([^)\s]{1,2000})\)/g, (m, txt, url) => {
+          const u = safeUrl(url);
+          return u ? `<a href="${u}" target="_blank" rel="noopener noreferrer">${txt}</a>` : m;
+        }) : t;
+      }).join("");
+    }
+    const FENCE_OPEN = /^\s*```([^`]*)$/;        // ``` + optional info string, at line start
+    const FENCE_CLOSE = /^\s*```\s*$/;           // a bare ``` line closes the block
+    const BLOCK_START = /^\s*(#{1,6}\s|>|[-*+]\s|\d+[.)]\s|```|([-*_])\2\2)/;
+    function renderBlocks(text) {
+      const lines = text.replace(/\r/g, "").split("\n");
+      let html = "", i = 0;
+      const inl = (t) => renderInline(escapeHtml(t));
+      while (i < lines.length) {
+        const line = lines[i];
+        if (!line.trim()) { i++; continue; }
+        if (FENCE_OPEN.test(line)) {
+          // Only open a fence when a matching close exists in THIS block. An orphan/unterminated
+          // fence (e.g. a truncated KB chunk) is dropped so following headings/bullets/links
+          // survive instead of being swallowed. Blockquote nesting is handled for free: the
+          // quote loop strips "> " before recursing, so a fenced block inside a quote lands here.
+          let j = i + 1;
+          while (j < lines.length && !FENCE_CLOSE.test(lines[j])) j++;
+          if (j < lines.length) {
+            html += `<pre class="code"><code>${escapeHtml(lines.slice(i + 1, j).join("\n"))}</code></pre>`;
+            i = j + 1; continue;
+          }
+          i++; continue;   // unterminated → drop the stray marker, keep parsing the rest
+        }
+        if (/^\s*([-*_])\1\1+\s*$/.test(line)) { html += "<hr>"; i++; continue; }
+        let h = line.match(/^\s*(#{1,6})\s+(.*)$/);
+        if (h) {
+          const n = h[1].length, txt = h[2].trim();
+          if (txt.length <= 80) { html += `<h${n}>${inl(txt)}</h${n}>`; i++; continue; }
+          lines[i] = txt;  // too long to be a heading (e.g. a flattened KB chunk) → drop the marker, fall through as prose
+        }
+        if (/^\s*>\s?/.test(line)) {
+          const buf = [];
+          while (i < lines.length && /^\s*>\s?/.test(lines[i])) buf.push(lines[i++].replace(/^\s*>\s?/, ""));
+          html += `<blockquote>${renderBlocks(buf.join("\n"))}</blockquote>`; continue;
+        }
+        if (/^\s*[-*+]\s+/.test(line)) {
+          const items = [];
+          while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) items.push(lines[i++].replace(/^\s*[-*+]\s+/, ""));
+          html += "<ul>" + items.map((t) => `<li>${inl(t)}</li>`).join("") + "</ul>"; continue;
+        }
+        if (/^\s*\d+[.)]\s+/.test(line)) {
+          const items = [];
+          while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])) items.push(lines[i++].replace(/^\s*\d+[.)]\s+/, ""));
+          html += "<ol>" + items.map((t) => `<li>${inl(t)}</li>`).join("") + "</ol>"; continue;
+        }
+        const buf = [lines[i++]];
+        while (i < lines.length && lines[i].trim() && !BLOCK_START.test(lines[i])) buf.push(lines[i++]);
+        html += `<p>${inl(buf.join("\n")).replace(/\n/g, "<br>")}</p>`;
+      }
+      return html;
+    }
+    function renderMarkdown(src) {              // fences are tokenized line-by-line inside renderBlocks
+      return renderBlocks(src == null ? "" : String(src));
+    }
+
+    // ── Agent-step timeline: render what the agent DOES, for auditability ───
+    // Per-tool display metadata (icon + present-tense label).
+    const TOOL_META = {
+      ask_orders:            { icon: "🔍", label: "Searched orders" },
+      lookup_customer:       { icon: "👤", label: "Looked up customer" },
+      score_order:           { icon: "📊", label: "Scored order risk" },
+      flag_order_for_review: { icon: "🚩", label: "Flagged for review" },
+      search_policies:       { icon: "📋", label: "Searched policies" },
+      sap_credit_check:      { icon: "💳", label: "Checked SAP credit" },
+      load_skill:            { icon: "📖", label: "Loaded skill" },
+      describe_entity:       { icon: "🧭", label: "Looked up entity" },
+    };
+    const toolMeta = (name) => TOOL_META[name] || { icon: "🔧", label: name || "tool" };
+
+    // The model is *asked* to narrate as `<thinking>…</thinking>` then `<response>…</response>`,
+    // but smaller models (Nova Lite) frequently drop the tags. Route text robustly so a missing
+    // <response> wrapper never dumps the markdown answer into the (un-formatted) reasoning path.
+    function splitTextRun(run) {
+      const strip = (s) => s.replace(/<\/?(thinking|response)>/g, "").trim();
+      // 1) Explicit <response> wins (closed, or still streaming via the `$` fallback).
+      const resp = run.match(/<response>([\s\S]*?)(?:<\/response>|$)/);
+      if (resp) {
+        return { reason: strip(run.slice(0, resp.index) + run.slice(resp.index + resp[0].length)),
+                 answer: resp[1] };
+      }
+      // 2) No <response>, but a thinking block has closed → everything after it is the answer.
+      const close = run.lastIndexOf("</thinking>");
+      if (close >= 0) return { reason: strip(run.slice(0, close)), answer: strip(run.slice(close + 11)) };
+      // 3) A thinking block is still open (no close yet) → all reasoning, no answer.
+      if (run.indexOf("<thinking>") >= 0) return { reason: strip(run), answer: "" };
+      // 4) No tags at all → the model answered directly; render the whole run as markdown.
+      return { reason: "", answer: strip(run) };
+    }
+
+    // Fold the ordered event stream (text runs + step events) into render items, IN STREAM
+    // ORDER — reasoning and answer text stay interleaved with the tool calls they sit
+    // between, instead of all the prose collapsing into one block below the timeline.
+    function buildConversation(stream) {
+      const items = [];   // {type:'reason'|'answer',text} | {type:'tool',call,result}
+      const pushText = (type, text) => {            // merge runs only across an unbroken span
+        const last = items[items.length - 1];        // (a tool call between two runs splits them)
+        if (last && last.type === type) last.text += "\n" + text;
+        else items.push({ type, text });
+      };
+      for (const e of stream) {
+        if (e.k === "text") {
+          const { reason, answer: a } = splitTextRun(e.s);
+          if (reason) pushText("reason", reason);
+          if (a) pushText("answer", a);
+        } else if (e.step.kind === "reason" && e.step.text) {
+          pushText("reason", e.step.text);
+        } else if (e.step.kind === "tool_call") {
+          items.push({ type: "tool", call: e.step, result: null });
+        } else if (e.step.kind === "tool_result") {
+          const open = items.find((x) => x.type === "tool" && x.call.id === e.step.id && !x.result);
+          if (open) open.result = e.step;
+          else items.push({ type: "tool", call: { name: "result" }, result: e.step });
+        }
+      }
+      return items;
+    }
+
+    function fmtToolInput(input) {
+      if (input == null || typeof input !== "object") return input != null ? String(input) : "";
+      return Object.entries(input).map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`).join("  ·  ");
+    }
+    const brk = (s) => escapeHtml(s).replace(/\n+/g, "<br>");
+
+    // ── Tabular tool results ────────────────────────────────────────────────
+    // Backend tools (Snowflake / SAP / order-actions) return their payload as a
+    // JSON string in the step's `text`. Render an array-of-objects as a table and a
+    // lone object as a key/value table, instead of dumping raw JSON at the user.
+    // Anything that isn't JSON (e.g. search_policies' markdown) falls back to text.
+    function parseTabular(text) {
+      const t = (text || "").trim();
+      if (!(t.startsWith("[") || t.startsWith("{"))) return null;
+      let v; try { v = JSON.parse(t); } catch (_) { return null; }
+      const isRow = (x) => x && typeof x === "object" && !Array.isArray(x);
+      if (Array.isArray(v) && v.length && v.every(isRow)) return { kind: "rows", rows: v };
+      if (isRow(v) && Object.keys(v).length) return { kind: "kv", obj: v };
+      return null;
+    }
+    const humanize = (k) => String(k).replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+    const grp = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    function cellHtml(v) {
+      if (v == null || v === "") return '<span class="nul">—</span>';
+      if (typeof v === "boolean") return `<span class="b-${v}">${v}</span>`;
+      if (typeof v === "number") return escapeHtml(Number.isInteger(v) ? grp(v) : String(v));
+      if (typeof v === "object") return escapeHtml(JSON.stringify(v));
+      return escapeHtml(String(v));
+    }
+    function renderTabular(tab) {
+      if (tab.kind === "kv") {
+        const body = Object.entries(tab.obj).map(([k, v]) =>
+          `<tr><th scope="row">${escapeHtml(humanize(k))}</th>`
+          + `<td class="${typeof v === "number" ? "num" : ""}">${cellHtml(v)}</td></tr>`).join("");
+        return `<div class="tbl-wrap"><table class="tbl kv"><tbody>${body}</tbody></table></div>`;
+      }
+      const rows = tab.rows, cols = [];
+      rows.forEach((r) => Object.keys(r).forEach((k) => { if (!cols.includes(k)) cols.push(k); }));
+      const num = {};   // right-align a column only when every present value is numeric
+      cols.forEach((c) => { num[c] = rows.some((r) => typeof r[c] === "number")
+        && rows.every((r) => r[c] == null || typeof r[c] === "number"); });
+      const head = cols.map((c) => `<th class="${num[c] ? "num" : ""}">${escapeHtml(humanize(c))}</th>`).join("");
+      const body = rows.map((r) => "<tr>"
+        + cols.map((c) => `<td class="${num[c] ? "num" : ""}">${cellHtml(r[c])}</td>`).join("") + "</tr>").join("");
+      return `<div class="tbl-wrap"><table class="tbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+    }
+
+    // ── Knowledge-base policy results ───────────────────────────────────────
+    // `search_policies` returns `[s3://…/file.md]\n<markdown chunk>` blocks joined
+    // by blank lines (see knowledge.py). Render each as a source-labelled card with
+    // its markdown formatted, instead of dumping the raw #/**/- markers at the user.
+    function parsePolicyResult(text) {
+      const t = (text || "").trim();
+      const re = /^\[((?:s3:\/\/|kb)[^\]\n]*)\][ \t]*$/gm;   // a source marker on its own line
+      const marks = [];
+      let m; while ((m = re.exec(t))) marks.push({ src: m[1], lineStart: m.index, bodyStart: re.lastIndex });
+      if (!marks.length) return null;
+      return marks.map((mk, i) => ({
+        src: mk.src,
+        body: t.slice(mk.bodyStart, i + 1 < marks.length ? marks[i + 1].lineStart : t.length).trim(),
+      }));
+    }
+    // A flattened single-line chunk has its bullets inline (". - foo - bar"); re-break
+    // them so the markdown list parser sees them. Structured (multi-line) chunks pass through.
+    const reflow = (s) => (s = s == null ? "" : String(s)).includes("\n") ? s
+      : s.replace(/\s+[-•]\s+(?=[A-Z])/g, "\n- ");  // only at a capitalised clause → skips "90% - 80%", "high-risk"
+    function renderPolicyResult(docs) {
+      return docs.map((d) => {
+        const src = d.src || "", body = d.body || "";
+        const name = escapeHtml(src.split("/").pop() || src);
+        return `<div class="kb-doc"><div class="kb-src" title="${escapeHtml(src)}">`
+          + `<span class="kb-ico">📄</span>${name}</div>`
+          + `<div class="md kb-body">${renderMarkdown(reflow(body))}</div></div>`;
+      }).join("");
+    }
+
+    // Inner HTML for ONE timeline row (without the outer `.tl` wrapper) plus its wrapper
+    // class. The painter reuses the wrapper node across repaints, so the one-shot `rise`
+    // fade-in plays once per row instead of restarting on every streamed token.
+    function tlRow(it, opts) {
+      opts = opts || {};
+      // The final answer (opts.output — the last text item) is shown as-is. All other text —
+      // tagged <thinking> reasoning AND untagged intermediate narration between tool calls —
+      // collapses into a "Thinking" block, so only the output is shown by default.
+      if (it.type === "answer" && opts.output)
+        return { cls: "tl tl-answer md", html: renderMarkdown(it.text) + (opts.caret ? '<span class="cursor"></span>' : "") };
+      if (it.type === "reason" || it.type === "answer") {
+        const prev = it.text.replace(/\s+/g, " ").replace(/^[#>*\-\s]+/, "").trim().slice(0, 64);
+        return { cls: "tl tl-think", html:
+          `<details class="tl-d"><summary class="tl-head"><span class="tl-caret">▸</span>`
+          + `<span class="tl-ico">✦</span><span class="tl-name">Thinking</span>`
+          + (prev ? `<span class="tl-think-prev">${escapeHtml(prev)}…</span>` : "")
+          + `</summary><div class="tl-res tl-think-body md">${renderMarkdown(it.text)}</div></details>` };
+      }
+      const { icon, label } = toolMeta(it.call.name);
+      const args = fmtToolInput(it.call.input);
+      const r = it.result;
+      let resCls = "pending", resHtml = "running…";
+      if (r) {
+        if (r.status === "error") { resCls = "error"; resHtml = brk(r.text || "failed"); }
+        else {
+          const tab = parseTabular(r.text);
+          const docs = tab ? null : parsePolicyResult(r.text);
+          if (tab)       { resCls = "success tbl-res"; resHtml = renderTabular(tab); }
+          else if (docs) { resCls = "success kb-res";  resHtml = renderPolicyResult(docs); }
+          else           { resCls = "success";         resHtml = brk(r.text || "done"); }
+        }
+      }
+      // Collapse the result body by default; the <summary> head toggles it. Native
+      // <details> keeps its open/closed state across repaints (a done row's signature
+      // is stable, so the painter never resets it). Errors open so failures stay visible.
+      const open = r && r.status === "error" ? " open" : "";
+      const html = `<details class="tl-d"${open}><summary class="tl-head">`
+        + `<span class="tl-caret">▸</span>`
+        + `<span class="tl-ico">${icon}</span><span class="tl-name">${escapeHtml(label)}</span>`
+        + (args ? `<span class="tl-args">${escapeHtml(args)}</span>` : "")
+        + `</summary><div class="tl-res ${resCls}">${resHtml}</div></details>`;
+      return { cls: "tl tl-tool", html };
+    }
+
+    async function refresh() {
+      const r = await fetch("/me"); const m = await r.json();
+      authed = m.authed;
+      $("#who").textContent = authed ? `signed in: ${m.name || ""}${m.email ? " · " + m.email : ""}` : "not signed in";
+      $("#authbtns").innerHTML = authed
+        ? `<button class="ghost" onclick="logout()">Sign out</button>`
+        : `<a class="signin" href="/login">Sign in with Microsoft</a>`;
+      $("#examples").style.display = authed ? "flex" : "none";
+      const banner = $("#banner");
+      if (!authed && m.config_problem) banner.innerHTML = `<span class="err">Config issue: ${m.config_problem}</span>`;
+      else if (authed && m.runtime_set === false) banner.innerHTML = `<span class="err">OBO_RUNTIME_ARN not set — set it in <code>app/.env</code> after <code>make redeploy</code>.</span>`;
+      else if (!authed) banner.innerHTML = `Sign in as different users to see the intersection: order reads run <b>as you</b> (RLS), customer reads run as the agent.`;
+      else banner.textContent = "";
+      $("#q").disabled = !authed; $("#send").disabled = !authed;
+    }
+
+    async function logout() { await fetch("/logout", {method:"POST"}); location.reload(); }
+
+    async function ask(text) {
+      if (!text.trim()) return;
+      log.appendChild(el("msg me", text));
+
+      // Bot bubble = a live audit timeline (reasoning + tool steps) above the answer,
+      // with a "working" status footer until the run completes.
+      const bot = el("msg bot streaming");
+      const timeline = el("timeline");
+      const content = el("md");   // only used for pre-flight errors / "(no answer)"; the answer now renders inline
+      content.style.display = "none";
+      const status = el("working");
+      status.innerHTML = `<span class="star">✶</span><span class="label">Thinking</span>`
+        + `<span class="dots"><i></i><i></i><i></i></span><span class="elapsed"></span>`;
+      bot.append(timeline, content, status);
+      log.appendChild(bot);
+      scrollDown(true);
+
+      // Cycle the star + elapsed timer for the life of the run (Claude-Code feel).
+      const star = status.querySelector(".star"), elapsed = status.querySelector(".elapsed");
+      const frames = ["✶","✸","✹","✺","✷"], t0 = Date.now();
+      let fi = 0;
+      const tick = setInterval(() => {
+        star.textContent = frames[fi = (fi + 1) % frames.length];
+        const s = (Date.now() - t0) / 1000;
+        elapsed.textContent = s >= 1 ? `${s.toFixed(0)}s` : "";
+      }, 110);
+
+      const stream = [];   // ordered: {k:'text',s} | {k:'step',step}
+      let got = false, raf = 0;
+      const tlNodes = [], tlSig = [];   // reused timeline row nodes + their last signatures
+      const pushText = (t) => {
+        const last = stream[stream.length - 1];
+        if (last && last.k === "text") last.s += t; else stream.push({ k: "text", s: t });
+      };
+      const paint = () => {
+        raf = 0;
+        const items = buildConversation(stream);
+        const streaming = bot.classList.contains("streaming");
+        // The output is the last answer text with NO tool call after it; an answer followed
+        // by more tools is still intermediate narration → stays a collapsed Thinking block.
+        let lastAnswer = -1, lastTool = -1;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type === "answer") lastAnswer = i;
+          else if (items[i].type === "tool") lastTool = i;
+        }
+        const outputIdx = lastAnswer > lastTool ? lastAnswer : -1;
+        // Incremental timeline: only new or changed rows touch the DOM, so streaming text
+        // deltas don't tear down (and re-flash) the existing rows. The blinking caret trails
+        // the last item while it's still the answer being streamed.
+        for (let i = 0; i < items.length; i++) {
+          const output = i === outputIdx;
+          const caret = streaming && i === items.length - 1 && items[i].type === "answer";
+          const { cls, html } = tlRow(items[i], { output, caret });
+          const sig = cls + " " + html;
+          let node = tlNodes[i];
+          if (!node) {
+            node = document.createElement("div");
+            node.className = cls; node.innerHTML = html;
+            timeline.appendChild(node); tlNodes[i] = node; tlSig[i] = sig;
+          } else if (tlSig[i] !== sig) {
+            if (node.className !== cls) node.className = cls;
+            node.innerHTML = html; tlSig[i] = sig;
+          }
+        }
+        while (tlNodes.length > items.length) { tlNodes.pop().remove(); tlSig.pop(); }
+        scrollDown();
+      };
+      const repaint = () => { if (!raf) raf = requestAnimationFrame(paint); };
+      const advance = () => { if (!got) { got = true; status.querySelector(".label").textContent = "Working"; } };
+      const stop = () => { clearInterval(tick); cancelAnimationFrame(raf); status.remove(); bot.classList.remove("streaming"); };
+
+      try {
+        const r = await fetch("/chat", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({message:text})});
+        if (!r.ok) {  // pre-flight failure (auth/config): JSON error before the stream opens
+          let detail = "error";
+          try { detail = (await r.json()).detail || detail; } catch (_) {}
+          stop(); bot.classList.add("err"); content.style.display = ""; content.textContent = detail; return;
+        }
+        // Stream of newline-delimited JSON events: delta | step | error | done.
+        const reader = r.body.getReader(), dec = new TextDecoder();
+        let buf = "";
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          let nl;
+          while ((nl = buf.indexOf("\n")) >= 0) {
+            const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+            if (!line) continue;
+            let ev; try { ev = JSON.parse(line); } catch (_) { continue; }
+            if (ev.type === "delta") { advance(); pushText(ev.text); repaint(); }
+            else if (ev.type === "step") { advance(); stream.push({ k: "step", step: ev.step }); repaint(); }
+            else if (ev.type === "error") { advance(); pushText((stream.length ? "\n\n" : "") + "⚠️ " + ev.detail); repaint(); }
+          }
+        }
+        stop();
+        paint();  // final paint — streaming class gone, so no caret
+        if (!timeline.innerHTML) { content.style.display = ""; content.textContent = "(no answer)"; }
+        scrollDown();
+      } catch (e) {
+        stop(); bot.classList.add("err"); content.style.display = ""; content.textContent = String(e);
+      }
+    }
+
+    $("#f").addEventListener("submit", (e) => { e.preventDefault(); const v = $("#q").value; $("#q").value=""; ask(v); });
+    $("#examples").addEventListener("click", (e) => { if (e.target.dataset.q) ask(e.target.dataset.q); });
+    refresh();
+  </script>
+</body>
+</html>

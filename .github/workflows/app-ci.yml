@@ -1,0 +1,35 @@
+name: app · CI
+
+# A light smoke check for the webapp: install the four runtime deps and byte-compile
+# the backend so an obvious syntax/import-shape error is caught on PR. The real
+# exercise is signing in against a live runtime (User A vs User B) — see app/README.md.
+# Path-filtered to app/.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - ".github/workflows/app-ci.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - ".github/workflows/app-ci.yml"
+
+defaults:
+  run:
+    working-directory: app
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install runtime deps
+        run: pip install -r requirements.txt
+      - name: Byte-compile the backend
+        run: python -m compileall -q app

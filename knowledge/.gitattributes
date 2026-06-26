@@ -1,0 +1,8 @@
+# Normalize line endings on checkout/commit.
+* text=auto eol=lf
+
+# The compiled ontology and the bindings index are generated. Mark them so GitHub
+# collapses them in diffs and excludes them from language stats — they stay
+# committed (CI gates on them).
+build/ontology.compiled.json linguist-generated=true
+build/bindings.json linguist-generated=true

@@ -1,0 +1,25 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# fetched knowledge artifacts (pulled from order-triage-knowledge)
+/skills/
+/ontology/
+/kb/
+
+# local agent state
+.local_state/
+*.session.json
+
+.DS_Store

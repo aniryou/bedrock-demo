@@ -1,0 +1,39 @@
+# Copy to terraform.tfvars (gitignored) or use TF_VAR_* env vars.
+region = "us-west-2"
+
+# Inputs from `terraform -chdir=bootstrap output` (after the agent/stubs CIs publish):
+agent_image_uri  = "<ACCOUNT>.dkr.ecr.us-west-2.amazonaws.com/order-triage-agent:latest"
+artifacts_bucket = "order-triage-artifacts-<ACCOUNT>"
+
+# Sensitive + REQUIRED (no default — terraform errors if unset). Prefer an env var over
+# committing: `export TF_VAR_snowflake_api_key=...` (the orchestrator exports it from
+# SNOWFLAKE_API_KEY in .env). Use a strong random value, e.g. `openssl rand -hex 24`.
+# snowflake_api_key = "use-a-strong-random-value"
+# bedrock_model_id  = "amazon.nova-lite-v1:0"   # live default; overrides the agent's code default
+
+# Optional tunables (defaults shown — uncomment to override):
+# name_prefix                      = "order-triage"   # renames runtime/memory/policy/KB/IAM/lambdas
+# embedding_model_id               = "amazon.titan-embed-text-v2:0"  # change WITH embedding_dimension
+# embedding_dimension              = 1024
+# lambda_runtime                   = "python3.12"
+# lambda_architectures             = ["arm64"]
+# lambda_timeout                   = 30
+# snowflake_lambda_timeout         = 60
+# memory_event_expiry_days         = 90
+# max_tokens                       = 4096
+# gateway_iam_propagation_delay    = "30s"
+# target_actions_propagation_delay = "90s"
+
+# Observability / guardrail / evaluations (added since the gateway-only migration):
+# enable_guardrail                      = true       # native Bedrock Guardrail (PROMPT_ATTACK input filter)
+# guardrail_prompt_attack_strength      = "MEDIUM"   # LOW | MEDIUM | HIGH
+# alert_email                           = ""         # SNS alarm subscriber; empty = alarms notify no one
+# enable_online_evaluations             = false      # opt-in AgentCore online Evaluations (per-trace LLM judge)
+# enable_actor_resolution               = false      # opt-in: resolve the FinOps "Top actors" oid -> name via Graph (ADR-0007)
+# graph_resolver_secret_name            = ""         # SM secret {tenant_id,client_id,client_secret}; required when enable_actor_resolution = true
+# model_input_usd_per_million           = 0.06       # FinOps dashboard estimate (Nova Lite)
+# model_output_usd_per_million          = 0.24       # FinOps dashboard estimate (Nova Lite)
+# trace_indexing_percentage             = 100        # X-Ray Transaction Search indexing rate
+# memory_log_retention_days             = 30
+# bedrock_invocation_log_retention_days = 30
+# function_log_retention_days           = 30

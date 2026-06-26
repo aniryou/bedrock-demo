@@ -1,0 +1,30 @@
+# ═════════════════════════════════════════════════════════════════════════
+# SOURCE-OF-TRUTH REGISTRY
+# Built from the diagram's source-of-truth annotations. `kind` captures the
+# nature of each source; `note` records current-vs-planned state. Querying
+# this is a maturity view: "what is still in email / Excel / manual today?"
+# ═════════════════════════════════════════════════════════════════════════
+
+connections:
+  - { apiName: sap_prod,   kind: sap }
+  - { apiName: pluto_prod, kind: pluto }
+
+datasources:
+  - { apiName: pluto,                kind: pluto_object,  connection: pluto_prod, note: "Contract master; mirrored to SAP" }
+  - { apiName: sap,                  kind: sap_object,    connection: sap_prod,   note: "Transactional system of record (orders, deliveries, process orders)" }
+  - { apiName: sap_stock,            kind: sap_object,    connection: sap_prod,   note: "Stock from SAP; 3P warehouses via EDI; US 3P manual (no EDI)" }
+  - { apiName: master_data,          kind: master_data,   note: "Product / SKU master data" }
+  - { apiName: sop_excel,            kind: spreadsheet,   note: "S&OP production planning workbook (current state)" }
+  - { apiName: recipe_generator_brs, kind: saas_app,      note: "Recipe generator (BRS); Infinity presets" }
+  - { apiName: manual_yield,         kind: manual,        note: "Yield not in SAP; manual capture today" }
+  - { apiName: derived_weekly,       kind: derived,       note: "Computed weekly from stock + contracts" }
+  - { apiName: customer_email,       kind: email,         note: "Inbound POs by customer email today; regional mailboxes planned" }
+  - { apiName: project44,            kind: saas_app,      note: "Project 44 shipment tracking" }
+  - { apiName: infinity_order_portal,kind: saas_app,      note: "Infinity order-management portal" }
+  - { apiName: notification_channels,kind: saas_app,      note: "Marketplace + regional mailboxes" }
+  - { apiName: offer_intake,         kind: email,         note: "Offers via email / WhatsApp / broker today" }
+  - { apiName: trading_desk,         kind: manual,        note: "Trading desk; basis not yet systematised" }
+  - { apiName: research_docs,        kind: document_store,note: "Research team outputs (PowerPoint + email today)" }
+  - { apiName: dpm_brs_connector,    kind: connector,     note: "Demand-plan → recipe (DPM → BRS) connector" }
+  - { apiName: origin_channels,      kind: saas_app,      note: "Origin execution channels: portal / email / Excel" }
+  - { apiName: decision_ledger,      kind: messaging,     note: "Decision Ledger; email + WhatsApp today" }

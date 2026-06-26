@@ -1,0 +1,33 @@
+{
+  "registry": {
+    "name": "order_triage_registry",
+    "description": "Registry for the order-triage agent, its tools, and its skills."
+  },
+  "records": [
+    {
+      "name": "order-triage-agent",
+      "descriptorType": "A2A",
+      "kind": "agent",
+      "summary": "Snowflake-backed Strands order-triage agent on AgentCore Runtime."
+    },
+    {
+      "name": "order-triage-tools",
+      "descriptorType": "MCP",
+      "kind": "tools",
+      "tools": [
+        "search_policies",
+        "describe_entity",
+        "load_skill",
+        "sap___getCreditStatus",
+        "orders___flagOrder",
+        "snowflake___ask"
+      ]
+    },
+    {
+      "name": "order-triage-knowledge",
+      "descriptorType": "AgentSkills",
+      "kind": "skills",
+      "skills": ["high_value_review", "credit_hold", "dispute_triage"]
+    }
+  ]
+}
