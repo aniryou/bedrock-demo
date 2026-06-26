@@ -24,15 +24,15 @@
 <polyline points="96,330 184,330" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="340,176 340,240 210,240 210,304" fill="none" stroke="#185FA5" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ab)"/>
 <polyline points="236,330 444,330" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="444,356 444,410 430,410 430,464" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
+<polyline points="457,356 457,410 430,410 430,464" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="430,516 430,614" fill="none" stroke="#185FA5" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ab)"/>
-<polyline points="496,356 555,356 555,464 614,464" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
+<polyline points="496,343 496,410 614,410 614,477" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
 <polyline points="470,356 470,585 640,585 640,614" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
 <polyline points="496,330 694,330" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="720,304 720,100 340,100 340,124" fill="none" stroke="#185FA5" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ab)"/>
-<polyline points="746,304 860,304 860,222 974,222" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
+<polyline points="746,317 860,317 860,222 974,222" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="746,330 974,330" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="746,356 860,356 860,438 974,438" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
+<polyline points="746,343 860,343 860,438 974,438" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="1026,438 1294,438" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="1000,464 1000,614" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
 <polyline points="470,304 470,118 1300,118 1300,150 1424,150" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
@@ -66,10 +66,10 @@
 <text x="340" y="292" font-size="10" text-anchor="middle" fill="#5F5E5A">InvokeAgentRuntime · Bearer JWT</text>
 <circle cx="241" cy="288" r="9" fill="#232F3E"/>
 <text x="241" y="291" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">2</text>
-<rect x="395" y="399" width="84" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="437" y="410" font-size="10" text-anchor="middle" fill="#5F5E5A">ConverseStream</text>
-<circle cx="384" cy="406" r="9" fill="#232F3E"/>
-<text x="384" y="409" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">3</text>
+<rect x="402" y="399" width="84" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="444" y="410" font-size="10" text-anchor="middle" fill="#5F5E5A">ConverseStream</text>
+<circle cx="391" cy="406" r="9" fill="#232F3E"/>
+<text x="391" y="409" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">3</text>
 <rect x="364" y="558" width="132" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
 <text x="430" y="569" font-size="10" text-anchor="middle" fill="#185FA5">guardrailConfig · async</text>
 <rect x="497" y="399" width="116" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
@@ -82,18 +82,18 @@
 <text x="507" y="291" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">4</text>
 <rect x="538" y="89" width="165" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
 <text x="620" y="100" font-size="10" text-anchor="middle" fill="#185FA5">OBO TOKEN_EXCHANGE · per-user</text>
-<rect x="816" y="252" width="89" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="860" y="263" font-size="10" text-anchor="middle" fill="#5F5E5A">SigV4 · AWS_IAM</text>
-<circle cx="804" cy="259" r="9" fill="#232F3E"/>
-<text x="804" y="262" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">5a</text>
-<rect x="819" y="319" width="100" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="869" y="330" font-size="10" text-anchor="middle" fill="#5F5E5A">SigV4 · flagOrder</text>
-<circle cx="808" cy="326" r="9" fill="#232F3E"/>
-<text x="808" y="329" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">5b</text>
-<rect x="829" y="386" width="62" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="860" y="397" font-size="10" text-anchor="middle" fill="#5F5E5A">OBO Bearer</text>
-<circle cx="818" cy="393" r="9" fill="#232F3E"/>
-<text x="818" y="396" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">5c</text>
+<rect x="816" y="258" width="89" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="860" y="270" font-size="10" text-anchor="middle" fill="#5F5E5A">SigV4 · AWS_IAM</text>
+<circle cx="804" cy="266" r="9" fill="#232F3E"/>
+<text x="804" y="269" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">5a</text>
+<rect x="819" y="334" width="100" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="869" y="345" font-size="10" text-anchor="middle" fill="#5F5E5A">SigV4 · flagOrder</text>
+<circle cx="808" cy="341" r="9" fill="#232F3E"/>
+<text x="808" y="344" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">5b</text>
+<rect x="829" y="380" width="62" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="860" y="390" font-size="10" text-anchor="middle" fill="#5F5E5A">OBO Bearer</text>
+<circle cx="818" cy="386" r="9" fill="#232F3E"/>
+<text x="818" y="390" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">5c</text>
 <rect x="1086" y="389" width="148" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
 <text x="1160" y="400" font-size="10" text-anchor="middle" fill="#5F5E5A">OAUTH → as the human · RLS</text>
 <circle cx="1075" cy="396" r="9" fill="#232F3E"/>
