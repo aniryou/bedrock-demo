@@ -9,7 +9,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
+import pytest
+
+import order_triage.tools as tools_init
 from order_triage import identity
 from order_triage.tools.skills import load_skill
 
@@ -137,6 +141,29 @@ def test_describe_entity_tool(tmp_path, monkeypatch):
     assert "NOT the agent's Snowflake runtime table" in out
     miss = onto.describe_entity("BeanLot")
     assert "No governed ontology entity" in miss and "CreditProfile" in miss
+
+
+# ── Gateway action coverage (_assert_action_coverage) ────────────────────────
+
+
+def _fake_tool(name):
+    """A stand-in for a registered tool; _tool_name() reads `.tool_name` first."""
+    return SimpleNamespace(tool_name=name)
+
+
+def test_action_coverage_passes_when_action_is_served(monkeypatch):
+    monkeypatch.setattr(
+        tools_init, "skill_loader", SimpleNamespace(required_actions=lambda: {"raiseException"})
+    )
+    tools_init._assert_action_coverage([_fake_tool("orders___flagOrder")])  # no raise
+
+
+def test_action_coverage_raises_when_action_unserved(monkeypatch):
+    monkeypatch.setattr(
+        tools_init, "skill_loader", SimpleNamespace(required_actions=lambda: {"raiseException"})
+    )
+    with pytest.raises(tools_init.SkillActionCoverageError):
+        tools_init._assert_action_coverage([_fake_tool("snowflake___ask")])  # flagOrder absent
 
 
 # ── Per-request user identity ────────────────────────────────────────────────

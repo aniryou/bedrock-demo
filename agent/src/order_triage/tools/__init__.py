@@ -1,9 +1,14 @@
-"""Agent tool registry (Gateway-only).
+"""Agent tool registry + the Gateway action contract.
 
-The backend tools (Snowflake reads, SAP credit, order flagging) are served by the
-AgentCore Gateway as MCP tools — Cedar-authorized and OBO-brokered via TOKEN_EXCHANGE —
-and passed in as ``extra_tools`` (built in runtime.py from the Gateway MCP client).
-Local-only tools (Knowledge Base, ontology, skill loader) are always present.
+The backend tools (Snowflake reads, SAP credit, order flagging) are served by the AgentCore
+Gateway as MCP tools and passed in as ``extra_tools`` (built in runtime.py); the live set is
+discovered per session, never hard-coded here. Local-only tools (Knowledge Base, ontology,
+skill loader) are always present.
+
+``ACTION_IMPLEMENTATIONS`` maps each ontology action a skill can invoke to the Gateway tool
+that serves it (names are ``<target>___<operationId>``; the operationId isn't the apiName —
+e.g. ``raiseException`` -> ``orders___flagOrder`` — so it's authored). The startup gate checks
+that every skill-invoked action resolves to a registered tool.
 """
 
 from __future__ import annotations
@@ -13,14 +18,12 @@ from .knowledge import search_policies
 from .ontology import describe_entity
 from .skills import load_skill
 
-# ontology ACTION apiName -> the Gateway MCP tool name that implements it.
-ACTION_IMPLEMENTATIONS = {
-    "raiseException": "orders___flagOrder",
-}
+# ontology action apiName -> the Gateway MCP tool that implements it.
+ACTION_IMPLEMENTATIONS = {"raiseException": "orders___flagOrder"}
 
 
 class SkillActionCoverageError(RuntimeError):
-    """A fetched skill can `invoke` an ontology action that no registered tool implements."""
+    """A loaded skill can invoke an ontology action that no registered Gateway tool serves."""
 
 
 def _tool_name(t) -> str | None:
@@ -29,24 +32,17 @@ def _tool_name(t) -> str | None:
 
 
 def _assert_action_coverage(tools: list) -> None:
-    """Fail fast if a loaded skill's `invoke` has no implementing (Gateway) tool."""
-    registered = {_tool_name(t) for t in tools}
-    gaps: dict[str, str] = {}
-    for action in sorted(skill_loader.required_actions()):
-        name = ACTION_IMPLEMENTATIONS.get(action)
-        if not name:
-            gaps[action] = "no tool mapped in ACTION_IMPLEMENTATIONS"
-        elif name not in registered:
-            gaps[action] = f"Gateway tool {name!r} not registered (is the Gateway target present?)"
+    """Every action a loaded skill may invoke must map to a registered Gateway tool."""
+    registered = {n for t in tools if (n := _tool_name(t))}
+    gaps = {
+        action: ACTION_IMPLEMENTATIONS.get(action)
+        for action in skill_loader.required_actions()
+        if ACTION_IMPLEMENTATIONS.get(action) not in registered
+    }
     if gaps:
-        invoked_by = {
-            s.name: [a for a in s.invokes if a in gaps]
-            for s in skill_loader.all_skills()
-            if any(a in gaps for a in s.invokes)
-        }
         raise SkillActionCoverageError(
-            f"Skill->action coverage gap {gaps}; invoked by {invoked_by}. "
-            "Add the action to ACTION_IMPLEMENTATIONS or fix the skill's `invokes`."
+            f"Skill-invoked action(s) not served by a registered Gateway tool: {gaps}. "
+            "Map them in ACTION_IMPLEMENTATIONS or fix the skill's `invokes`."
         )
 
 
@@ -57,5 +53,5 @@ def _local_tools() -> list:
 
 def get_tools(extra_tools: list | None = None) -> list:
     tools = _local_tools() + list(extra_tools or [])
-    _assert_action_coverage(tools)  # startup gate: every skill `invoke` has a tool
+    _assert_action_coverage(tools)  # startup gate
     return tools

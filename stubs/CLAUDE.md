@@ -14,7 +14,7 @@ under uvicorn.
 |---|---|---|---|
 | `sap_stub` | `GET /credit-status/{id}` | `sap` | in-memory dict |
 | `order_actions_stub` | `POST /orders/{id}/flag` | `orders` | order status from `snowflake_stub` over HTTP |
-| `snowflake_stub` | `GET /orders`, `/orders/{id}`, `/customers`, `/customers/{id}` | `snowflake` | live Snowflake SQL REST API |
+| `snowflake_stub` | `POST /ask` (agent) | `snowflake` | Cortex Analyst (NL→SQL over the `ORDERS_SV` semantic view) |
 
 ## Commands
 
@@ -35,15 +35,16 @@ Run a single test: `uv run pytest tests/test_snowflake_obo.py -q`.
 - **Inbound to `sap`/`orders`:** the Lambda Function URL is `AuthType=AWS_IAM`; the
   Gateway SigV4-signs each call with its execution role. There is **no app-layer key**
   on these — don't add `X-API-Key` checks to them.
-- **Inbound to `snowflake_stub`:** the Function URL stays `AuthType=NONE` and the service
-  authorizes itself, because the Gateway reaches it with a per-user Entra **OBO** bearer
-  (TOKEN_EXCHANGE) that occupies its single egress credential slot — leaving no slot for a
-  Gateway SigV4 identity, so `X-API-Key` carries the service path instead. Two paths,
-  selected in `snowflake_stub/app.py:_authorize`:
-  - **User (OBO):** a forwarded `Authorization: Bearer <token>` is presented to
-    Snowflake with token-type `OAUTH`; Snowflake enforces that user's RBAC.
-  - **Service:** otherwise a valid `X-API-Key` selects a key-pair `KEYPAIR_JWT` as the
-    SELECT-only `AGENT_RO` role.
+- **Inbound to `snowflake_stub`:** the Function URL stays `AuthType=NONE`; the Gateway reaches
+  it with a per-user Entra **OBO** bearer (TOKEN_EXCHANGE). `POST /ask` is **user (OBO) only**:
+  the forwarded `Authorization: Bearer <token>` is presented to Cortex Analyst and the SQL API
+  with token-type `OAUTH`, so the generated SQL runs in that user's Snowflake context and the
+  row-access policy scopes the rows. No service fallback — RLS is meaningless without a real
+  user, so a missing bearer is a 401. This is the only agent-facing tool (`snowflake___ask`).
+  - **Deferred (happy-path stub — come back later):** REST error mapping (a Snowflake failure
+    currently surfaces as a 500, not a 502), SQL-API async (HTTP 202) + partitioned results,
+    graceful degradation on a declined/failed query, and the key-pair **service-path
+    `GET /orders/{id}`** status read that `order_actions` needs for its OPEN-only rule.
 - **Authorization** (who may flag, who may read) lives in the **Cedar policy on the
   Gateway**, not in these services. The stubs enforce only business rules (e.g.
   `order_actions` flags OPEN orders only) and data access.

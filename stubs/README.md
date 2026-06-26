@@ -11,7 +11,7 @@ where `../infra` wires them up as the live Gateway's tool targets.
 |---|---|---|---|
 | `sap_stub` | `GET /credit-status/{id}` | `sap` | SAP credit status (on-hold, available credit) — deterministic in-memory data |
 | `order_actions_stub` | `POST /orders/{id}/flag` | `orders` | flag an OPEN order for review |
-| `snowflake_stub` | `GET /orders`, `GET /orders/{id}`, `GET /customers/{id}` | `snowflake` | read-only orders/customers from live Snowflake |
+| `snowflake_stub` | `POST /ask` (agent) | `snowflake` | NL analytics over the `ORDERS_SV` semantic view (Cortex Analyst) |
 
 ## How it fits
 
@@ -33,9 +33,9 @@ Gateway targets at runtime.
 │   ├── app.py                 # FastAPI routes + OPEN-only flag rule
 │   ├── lambda_handler.py      # Mangum(app)
 │   └── openapi.json
-├── snowflake_stub/            # read-only orders/customers stub (Gateway target `snowflake`)
-│   ├── app.py                 # FastAPI routes + OBO/service auth selection
-│   ├── snowflake_client.py    # Snowflake SQL REST API client (KEYPAIR_JWT / OBO bearer)
+├── snowflake_stub/            # NL analytics stub (Gateway target `snowflake`)
+│   ├── app.py                 # FastAPI route: POST /ask (OBO-only)
+│   ├── snowflake_client.py    # Cortex Analyst (NL→SQL over ORDERS_SV) client
 │   ├── lambda_handler.py      # Mangum(app)
 │   └── openapi.json
 ├── tests/                     # hermetic tests (FastAPI TestClient — no network/AWS)
@@ -78,8 +78,8 @@ make lambdas                    # build all arm64 Lambda zips into ./build
 The three services are thin FastAPI apps that the AgentCore Gateway reaches as tool targets.
 The Gateway authorizes each call against its Cedar policy, then invokes the matching Lambda
 Function URL — SigV4-signed for `sap`/`orders`, or with a per-user Entra OBO bearer for
-`snowflake`. `order_actions_stub` calls `snowflake_stub` over HTTP to check order status, and
-`snowflake_stub` reads live data from the Snowflake SQL REST API. The same services are built
+`snowflake`. `snowflake_stub` answers NL questions via Cortex Analyst over the `ORDERS_SV`
+semantic view (`order_actions_stub`'s status-read dependency is a deferred edge). The same services are built
 into Lambda zips and published, alongside their OpenAPI specs, for `../infra` to
 deploy.
 
@@ -101,7 +101,7 @@ flowchart TB
       direction TB
       SAP["sap_stub<br/>GET /credit-status/{id}"]
       ORD["order_actions_stub<br/>POST /orders/{id}/flag<br/>(OPEN-only rule)"]
-      SNOW["snowflake_stub<br/>GET /orders, /orders/{id}, /customers/{id}"]
+      SNOW["snowflake_stub<br/>POST /ask (Cortex Analyst)"]
     end
 
     GW -->|SigV4 IAM| SAP
@@ -109,8 +109,8 @@ flowchart TB
     GW -->|OBO bearer| SNOW
 
     SAP --> Mem["in-memory<br/>credit data"]
-    ORD -->|"order status over HTTP<br/>(X-API-Key)"| SNOW
-    SNOW -->|"SQL REST API<br/>KEYPAIR_JWT"| SF[("Snowflake<br/>ORDERS / CUSTOMERS<br/>AGENT_RO SELECT-only")]
+    ORD -.->|"order status (deferred)"| SNOW
+    SNOW -->|"Cortex Analyst + SQL API<br/>(user OBO · OAuth)"| SF[("Snowflake<br/>ORDERS / CUSTOMERS<br/>ORDERS_SV + RLS per user")]
     SNOW -->|"reads creds"| SM[("AWS Secrets Manager")]
 ```
 

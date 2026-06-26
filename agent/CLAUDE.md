@@ -42,8 +42,7 @@ make lint      # ruff                       (uv run ruff check .)
 
 ## How it works (orientation)
 
-- **Gateway-only.** The backend tools — `snowflake___getOrders` / `getOrder` /
-  `getCustomer`, `sap___getCreditStatus`, `orders___flagOrder` — are **not in this repo**.
+- **Gateway-only.** The backend tools — `snowflake___ask`, `sap___getCreditStatus`, `orders___flagOrder` — are **not in this repo**.
   The AgentCore Gateway serves them as MCP tools (Cedar-authorized, brokered
   on-behalf-of the user via `grant_type=TOKEN_EXCHANGE`) and they are passed into the agent
   as `extra_tools` at runtime. The agent forwards the inbound user JWT and mints no
@@ -51,24 +50,8 @@ make lint      # ruff                       (uv run ruff check .)
 - **Local tools** (`search_policies` → Bedrock Knowledge Base; `describe_entity` → ontology
   bindings; `load_skill`) never traverse the Gateway and are always present.
 - **Skills / ontology / KB are fetched content, not code.** `make skills` copies them from the
-  in-tree `../knowledge` folder into `skills/`, `ontology/`, `kb/` (all
-  gitignored) — no GitHub fetch, no token. The agent degrades gracefully to an empty catalog when
-  they're absent. The fetch is tuned by `SKILLS_DIR` / `ONTOLOGY_DIR` (where `fetch_skills.sh`
-  writes; the Dockerfile points them at `/app/skills` and `/app/ontology`); `SKILLS_REPO` /
-  `SKILLS_REF` only matter for the `gh`-clone fallback when no `../knowledge` checkout is present.
-
-## Runtime contract (env vars)
-
-The runtime is wired entirely by env vars (set by infra's `runtime.tf`; see `config.py` →
-`Config.from_env()`, `.env.example` as a template):
-
-- `BEDROCK_MODEL_ID`, `MAX_TOKENS` — model + max output tokens.
-- `KNOWLEDGE_BASE_ID`, `AGENTCORE_MEMORY_ID`, `GATEWAY_URL` — the AgentCore capabilities
-  (required; Gateway-only runtime has no local fallback).
-- `USER_JWT_HEADER` — the inbound header carrying the CUSTOM_JWT user token.
-- `BEDROCK_GUARDRAIL_ID` / `BEDROCK_GUARDRAIL_VERSION` — **optional**; the agent injects
-  `guardrailConfig` into the Converse call **only when BOTH are set**.
-- `AWS_REGION` is provided by the AgentCore runtime.
+  in-tree `../knowledge` folder into `skills/`, `ontology/`, `kb/` (all gitignored) — no GitHub
+  fetch, no token. The agent degrades gracefully to an empty catalog when they're absent.
 
 ## Conventions & gotchas
 
@@ -95,10 +78,6 @@ The runtime is wired entirely by env vars (set by infra's `runtime.tf`; see `con
   (`order_id` / `amount` / `status`). Ontology names are for routing, never tool arguments.
 - **Tests must stay hermetic** — no network, no model, no AWS. Backend tools are exercised
   only on the deployed runtime.
-- **Observability is launch-wired, not in-code.** The Dockerfile launches the runtime under
-  `opentelemetry-instrument` (`aws-opentelemetry-distro`) so AgentCore Observability captures
-  `gen_ai` traces automatically, and the runtime emits each turn's Bedrock token usage as a
-  CloudWatch EMF metric in the `OrderTriage/Agent` namespace.
 - **ruff**: line-length 100, `select = E, F, I, UP, B`, `E501` ignored. Run `make lint`
   before committing.
 - **Record recurring tool/command failures and their fixes here** as you hit them (a flaky
@@ -116,8 +95,3 @@ The runtime is wired entirely by env vars (set by infra's `runtime.tf`; see `con
   ../.worktrees/bedrock-demo/<branch> -b <branch>`. After pushing the branch, remove it:
   `git worktree remove ../.worktrees/bedrock-demo/<branch>` (then `git worktree prune`).
 - CI (`../.github/workflows/agent-ci.yml`) runs ruff + the hermetic tests on every PR.
-- `../.github/workflows/agent-build.yml` publishes the artifacts infra consumes: it runs on push to
-  `main` (including when a `knowledge/` change matches its path filter) or via `workflow_dispatch`
-  (optional `skills_ref` override), copies skills from the in-tree `../knowledge` folder, builds +
-  pushes the arm64 image to ECR, syncs `kb/` to the artifacts bucket, then cascades an
-  `agent-image-published` dispatch to the `deploy.yml` workflow.

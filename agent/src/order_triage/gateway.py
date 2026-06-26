@@ -6,9 +6,11 @@ brokered on-behalf-of the user via the target's OAUTH `grant_type=TOKEN_EXCHANGE
 credential. The agent forwards the inbound user JWT as the Gateway's bearer and mints
 nothing itself.
 
-Tool names the Gateway exposes (== the Cedar action names in policy.tf):
-    snowflake___getOrders, snowflake___getOrder, snowflake___getCustomer,
-    sap___getCreditStatus, orders___flagOrder
+The Gateway exposes each target as MCP tools named ``<target>___<operationId>`` — the same
+names Cedar authorizes in policy.tf. The live set is discovered per session via
+``list_tools_sync()``; the agent never hard-codes it. The ontology-action -> tool binding the
+agent relies on lives in ``tools/__init__.py`` (``ACTION_IMPLEMENTATIONS``) and is validated
+against this live surface at startup.
 
 Lifecycle: ``MCPClient`` runs the MCP session on a background thread and MUST be used as a
 context manager spanning the whole agent invocation (see runtime.py).

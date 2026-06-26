@@ -1,174 +1,74 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Snowflake Orders API",
-    "version": "1.0.0",
-    "description": "Read-only orders + customers service backed by Snowflake, used as an AgentCore Gateway target."
+    "title": "Snowflake Analytics API",
+    "version": "2.0.0",
+    "description": "Open-ended orders/customers analytics backed by a Snowflake semantic view + Cortex Analyst, used as an AgentCore Gateway target. One tool: ask a natural-language question; the service generates governed SQL and runs it as the signed-in user."
   },
   "servers": [
     { "url": "https://REPLACE_WITH_LAMBDA_FUNCTION_URL", "description": "Lambda Function URL (set by infra/provision Snowflake Lambda)" }
   ],
   "components": {
     "securitySchemes": {
-      "ApiKeyAuth": {
-        "type": "apiKey", "in": "header", "name": "X-API-Key",
-        "description": "Service path — the agent's own identity. The Gateway injects this for non-OBO calls; the stub then signs a Snowflake KEYPAIR_JWT as the SELECT-only AGENT_RO role."
-      },
       "BearerAuth": {
         "type": "http", "scheme": "bearer",
-        "description": "User (OBO) path — a per-user Entra token the Gateway injects via TOKEN_EXCHANGE; the stub forwards it to Snowflake (token-type OAUTH) so Snowflake enforces THAT user's RBAC."
+        "description": "User (OBO) path — a per-user Entra token the Gateway injects via TOKEN_EXCHANGE; the service forwards it to Cortex Analyst and the SQL API (token-type OAUTH) so Snowflake enforces THAT user's RBAC and row-access policy."
       }
     },
     "schemas": {
-      "Order": {
+      "AskRequest": {
         "type": "object",
+        "required": ["question"],
         "properties": {
-          "order_id": { "type": "string" },
-          "customer_id": { "type": "string" },
-          "customer_name": { "type": "string" },
-          "customer_tier": { "type": "string" },
-          "customer_region": { "type": "string" },
-          "customer_credit_limit": { "type": "number" },
-          "amount": { "type": "number" },
-          "status": { "type": "string" },
-          "channel": { "type": "string" },
-          "region": { "type": "string" },
-          "created_at": { "type": "string" }
+          "question": {
+            "type": "string",
+            "description": "A natural-language question about orders or customers, e.g. 'total open order value by region for enterprise customers' or 'show order O-1003'."
+          }
         }
       },
-      "Customer": {
+      "AskResponse": {
         "type": "object",
         "properties": {
-          "customer_id": { "type": "string" },
-          "name": { "type": "string" },
-          "tier": { "type": "string" },
-          "region": { "type": "string" },
-          "credit_limit": { "type": "number" }
+          "question": { "type": "string", "description": "The question that was asked." },
+          "sql": { "type": "string", "nullable": true, "description": "The SQL Cortex Analyst generated and ran, or null if it could not answer." },
+          "rows": {
+            "type": "array",
+            "description": "Result rows (each an object of column name to value), scoped to what the signed-in user may see.",
+            "items": { "type": "object", "additionalProperties": true }
+          },
+          "row_count": { "type": "integer", "description": "Number of rows returned." },
+          "explanation": { "type": "string", "description": "Short natural-language explanation of the answer, or guidance if the question could not be answered." }
         }
       }
     }
   },
-  "security": [ { "ApiKeyAuth": [] }, { "BearerAuth": [] } ],
+  "security": [ { "BearerAuth": [] } ],
   "paths": {
-    "/orders": {
-      "get": {
-        "operationId": "getOrders",
-        "summary": "List orders from Snowflake with optional filters",
-        "description": "Returns orders joined to their customer (name, tier, region, credit limit). Use this to find orders by status (e.g. OPEN), sales channel, customer tier, or a minimum amount. All filters are optional and combine with AND; omit them to list all orders.",
-        "parameters": [
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "schema": { "type": "string" },
-            "description": "Filter by order status, e.g. OPEN, SHIPPED, CANCELLED (case-insensitive)."
-          },
-          {
-            "name": "channel",
-            "in": "query",
-            "required": false,
-            "schema": { "type": "string" },
-            "description": "Filter by sales channel, e.g. WEB, PHONE, PARTNER (case-insensitive)."
-          },
-          {
-            "name": "tier",
-            "in": "query",
-            "required": false,
-            "schema": { "type": "string" },
-            "description": "Filter by customer tier, e.g. smb, enterprise (case-insensitive)."
-          },
-          {
-            "name": "min_amount",
-            "in": "query",
-            "required": false,
-            "schema": { "type": "number" },
-            "description": "Only return orders whose amount is greater than or equal to this value."
+    "/ask": {
+      "post": {
+        "operationId": "ask",
+        "summary": "Ask a natural-language question about orders and customers",
+        "description": "Use this for ANY question about orders or customers — single lookups ('show order O-1003', 'who is customer C-002'), filters ('open partner orders over 40000'), and aggregations/trends ('total open order value by region for enterprise customers', 'average order value by tier'). Pass the user's question through verbatim in natural language; do NOT construct SQL or pass field names. The service generates governed SQL over the orders/customers semantic view and runs it as the signed-in user: ORDER rows are scoped by row-level security to the regions that user is entitled to see (customer master data is not region-scoped). Returns the generated SQL, the result rows, and an explanation.",
+        "security": [ { "BearerAuth": [] } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AskRequest" }
+            }
           }
-        ],
+        },
         "responses": {
           "200": {
-            "description": "Matching orders",
+            "description": "The answer: generated SQL, result rows, and an explanation.",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Order" } }
+                "schema": { "$ref": "#/components/schemas/AskResponse" }
               }
             }
           },
-          "401": { "description": "Missing or invalid credential (X-API-Key or Bearer token)" }
-        }
-      }
-    },
-    "/orders/{order_id}": {
-      "get": {
-        "operationId": "getOrder",
-        "summary": "Get a single order by id from Snowflake",
-        "description": "Returns one order (joined to its customer) by order id, e.g. O-1003. Use this when you already know the exact order id and need its full detail. Returns 404 if no such order exists.",
-        "parameters": [
-          {
-            "name": "order_id",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string" },
-            "description": "Order id, e.g. O-1003"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The order",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/Order" }
-              }
-            }
-          },
-          "401": { "description": "Missing or invalid credential (X-API-Key or Bearer token)" },
-          "404": { "description": "No such order" }
-        }
-      }
-    },
-    "/customers": {
-      "get": {
-        "operationId": "listCustomers",
-        "summary": "List all customers from Snowflake",
-        "description": "Returns all customer records (name, tier, region, credit limit). Customer master data is non-confidential, so this is read on the agent's own identity and is available regardless of the signed-in user. Use this to look up a customer by name or to browse customers.",
-        "responses": {
-          "200": {
-            "description": "All customers",
-            "content": {
-              "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Customer" } }
-              }
-            }
-          },
-          "401": { "description": "Missing or invalid credential (X-API-Key or Bearer token)" }
-        }
-      }
-    },
-    "/customers/{customer_id}": {
-      "get": {
-        "operationId": "getCustomer",
-        "summary": "Get a single customer by id from Snowflake",
-        "description": "Returns one customer record (name, tier, region, credit limit) by customer id, e.g. C-002. Use this to look up customer details such as tier or credit limit. Returns 404 if no such customer exists.",
-        "parameters": [
-          {
-            "name": "customer_id",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string" },
-            "description": "Customer id, e.g. C-002"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The customer",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/Customer" }
-              }
-            }
-          },
-          "401": { "description": "Missing or invalid credential (X-API-Key or Bearer token)" },
-          "404": { "description": "No such customer" }
+          "401": { "description": "Missing or invalid user bearer token (OBO required)" },
+          "502": { "description": "Snowflake REST error (e.g. expired token, denied grant) — detail carries Snowflake's message" }
         }
       }
     }

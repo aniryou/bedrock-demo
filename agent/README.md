@@ -150,7 +150,7 @@ flowchart TB
     gwc -->|"MCP · user JWT bearer"| gw
     gw -->|"sap___getCreditStatus"| sap
     gw -->|"orders___flagOrder"| ord
-    gw -->|"snowflake___getOrders / getOrder / getCustomer"| sfl
+    gw -->|"snowflake___ask"| sfl
     sfl -. "RSA key-pair" .-> sm
     sfl -->|"KEYPAIR_JWT · SQL REST API"| snow
 ```
@@ -250,7 +250,7 @@ flowchart TB
             direction TB
             de["describe_entity(api_name)<br/>on-demand · zero prompt growth"]
             ls["load_skill(name)"]
-            act["search_policies (local KB)<br/>snowflake___getOrders / getOrder / getCustomer<br/>sap___getCreditStatus · orders___flagOrder<br/>(Gateway MCP · OBO-brokered)"]
+            act["search_policies (local KB)<br/>snowflake___ask<br/>sap___getCreditStatus · orders___flagOrder<br/>(Gateway MCP · OBO-brokered)"]
         end
     end
 
