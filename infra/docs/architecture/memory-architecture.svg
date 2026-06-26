@@ -25,16 +25,16 @@
 <polyline points="300,176 300,255 540,255 540,304" fill="none" stroke="#185FA5" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ab)"/>
 <polyline points="514,330 326,330" fill="none" stroke="#185FA5" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ab)"/>
 <polyline points="300,356 300,420 790,420 790,356" fill="none" stroke="#185FA5" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ab)"/>
-<polyline points="566,490 665,490 665,356 764,356" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
+<polyline points="566,490 665,490 665,343 764,343" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="790,304 790,150 1004,150" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="1056,150 1224,150" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="1276,124 1340,124 1340,145 1404,145" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
+<polyline points="1276,137 1340,137 1340,145 1404,145" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="1276,150 1340,150 1340,270 1404,270" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="1276,176 1276,395 1404,395" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="1030,176 1030,304 816,304" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
+<polyline points="1263,176 1263,395 1404,395" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
+<polyline points="1030,176 1030,317 816,317" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
 <polyline points="816,330 1030,330 1030,464" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="1030,464 1299,464 1299,171 1404,171" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
-<polyline points="1056,464 1230,464 1230,296 1404,296" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
+<polyline points="1030,464 1299,464 1299,158 1404,158" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
+<polyline points="1056,477 1230,477 1230,283 1404,283" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
 <polyline points="1056,490 1430,490 1430,421" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
 <polyline points="1004,490 816,490" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="790,516 790,560 540,560 540,516" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
@@ -63,10 +63,10 @@
 <text x="286" y="291" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">2</text>
 <rect x="482" y="409" width="127" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
 <text x="545" y="420" font-size="10" text-anchor="middle" fill="#185FA5">actor_id partition key</text>
-<rect x="591" y="425" width="148" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="665" y="436" font-size="10" text-anchor="middle" fill="#5F5E5A">3 CreateEvent (every turn)</text>
-<circle cx="580" cy="432" r="9" fill="#232F3E"/>
-<text x="580" y="436" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">3</text>
+<rect x="591" y="440" width="148" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="665" y="451" font-size="10" text-anchor="middle" fill="#5F5E5A">3 CreateEvent (every turn)</text>
+<circle cx="580" cy="447" r="9" fill="#232F3E"/>
+<text x="580" y="450" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">3</text>
 <rect x="765" y="139" width="111" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
 <text x="820" y="150" font-size="10" text-anchor="middle" fill="#5F5E5A">4 persist raw event</text>
 <circle cx="754" cy="146" r="9" fill="#232F3E"/>
@@ -75,26 +75,26 @@
 <text x="1140" y="112" font-size="10" text-anchor="middle" fill="#5F5E5A">5 async (lag s-min)</text>
 <circle cx="1074" cy="108" r="9" fill="#232F3E"/>
 <text x="1074" y="111" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">5</text>
-<rect x="1310" y="98" width="51" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="1336" y="109" font-size="10" text-anchor="middle" fill="#5F5E5A">6a facts</text>
-<circle cx="1299" cy="105" r="9" fill="#232F3E"/>
-<text x="1299" y="108" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">6a</text>
+<rect x="1342" y="134" width="51" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="1367" y="145" font-size="10" text-anchor="middle" fill="#5F5E5A">6a facts</text>
+<circle cx="1331" cy="141" r="9" fill="#232F3E"/>
+<text x="1331" y="144" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">6a</text>
 <rect x="1314" y="224" width="51" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
 <text x="1340" y="235" font-size="10" text-anchor="middle" fill="#5F5E5A">6b prefs</text>
 <circle cx="1303" cy="231" r="9" fill="#232F3E"/>
 <text x="1303" y="234" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">6b</text>
-<rect x="1245" y="338" width="62" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="1276" y="350" font-size="10" text-anchor="middle" fill="#5F5E5A">6c summary</text>
-<circle cx="1234" cy="346" r="9" fill="#232F3E"/>
-<text x="1234" y="349" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">6c</text>
-<rect x="937" y="293" width="100" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="987" y="304" font-size="10" text-anchor="middle" fill="#5F5E5A">in-session replay</text>
-<rect x="932" y="319" width="116" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="990" y="330" font-size="10" text-anchor="middle" fill="#5F5E5A">on MessageAddedEvent</text>
-<circle cx="921" cy="326" r="9" fill="#232F3E"/>
-<text x="921" y="329" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">7</text>
-<rect x="1260" y="415" width="78" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="1299" y="426" font-size="10" text-anchor="middle" fill="#5F5E5A">search top_k5</text>
+<rect x="1232" y="345" width="62" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="1263" y="356" font-size="10" text-anchor="middle" fill="#5F5E5A">6c summary</text>
+<circle cx="1221" cy="352" r="9" fill="#232F3E"/>
+<text x="1221" y="355" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">6c</text>
+<rect x="944" y="306" width="100" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="994" y="317" font-size="10" text-anchor="middle" fill="#5F5E5A">in-session replay</text>
+<rect x="972" y="335" width="116" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="1030" y="346" font-size="10" text-anchor="middle" fill="#5F5E5A">on MessageAddedEvent</text>
+<circle cx="961" cy="342" r="9" fill="#232F3E"/>
+<text x="961" y="345" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">7</text>
+<rect x="1260" y="409" width="78" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="1299" y="420" font-size="10" text-anchor="middle" fill="#5F5E5A">search top_k5</text>
 <rect x="1238" y="479" width="78" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
 <text x="1278" y="490" font-size="10" text-anchor="middle" fill="#5F5E5A">search top_k3</text>
 <rect x="855" y="441" width="111" height="15" fill="#FFFFFF" fill-opacity="0.95"/>

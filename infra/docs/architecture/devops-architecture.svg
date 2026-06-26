@@ -24,18 +24,18 @@
 <rect x="1382" y="110" width="418" height="500" rx="12" fill="none" stroke="#232F3E" stroke-width="1.6"/>
 <text x="1396" y="132" font-size="12.5" fill="#232F3E">Live AgentCore · us-west-2</text>
 <polyline points="116,360 274,360" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="326,334 440,334 440,250 554,250" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="326,386 440,386 440,480 554,480" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
+<polyline points="326,347 440,347 440,250 554,250" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
+<polyline points="326,373 440,373 440,480 554,480" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="300,386 300,500 430,500 430,614" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
 <polyline points="606,250 700,250 700,300 794,300" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="580,276 580,420 820,420 820,454" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="606,480 794,480" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="580,224 580,185 1060,185 1060,264" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="580,506 580,600 1086,600 1086,316" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
+<polyline points="580,506 580,600 1073,600 1073,303 1086,303" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="1086,290 1170,290 1170,380 1254,380" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="1280,196 1280,354" fill="none" stroke="#185FA5" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ab)"/>
 <polyline points="1306,380 1390,380 1390,330 1474,330" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="1306,406 1390,406 1390,520 1474,520" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
+<polyline points="1306,393 1390,393 1390,520 1474,520" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="846,300 846,340 1500,340 1500,304" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
 <polyline points="820,506 820,520 1474,520" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
 <polyline points="1500,304 1500,180 1654,180" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
@@ -56,14 +56,14 @@
 <text x="195" y="322" font-size="10" text-anchor="middle" fill="#5F5E5A">push · merge to main</text>
 <circle cx="126" cy="318" r="9" fill="#232F3E"/>
 <text x="126" y="321" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">1</text>
-<rect x="340" y="281" width="148" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="414" y="292" font-size="10" text-anchor="middle" fill="#5F5E5A">on agent/** · knowledge/**</text>
-<circle cx="329" cy="288" r="9" fill="#232F3E"/>
-<text x="329" y="291" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">2a</text>
-<rect x="406" y="435" width="67" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="440" y="446" font-size="10" text-anchor="middle" fill="#5F5E5A">on stubs/**</text>
-<circle cx="395" cy="442" r="9" fill="#232F3E"/>
-<text x="395" y="445" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">2b</text>
+<rect x="340" y="288" width="148" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="414" y="298" font-size="10" text-anchor="middle" fill="#5F5E5A">on agent/** · knowledge/**</text>
+<circle cx="329" cy="294" r="9" fill="#232F3E"/>
+<text x="329" y="298" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">2a</text>
+<rect x="406" y="429" width="67" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="440" y="440" font-size="10" text-anchor="middle" fill="#5F5E5A">on stubs/**</text>
+<circle cx="395" cy="436" r="9" fill="#232F3E"/>
+<text x="395" y="439" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">2b</text>
 <rect x="294" y="489" width="143" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
 <text x="365" y="500" font-size="10" text-anchor="middle" fill="#5F5E5A">PR validate · lint · test</text>
 <rect x="637" y="201" width="100" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
@@ -82,26 +82,26 @@
 <text x="840" y="185" font-size="10" text-anchor="middle" fill="#5F5E5A">dispatch: agent-image-published</text>
 <circle cx="741" cy="181" r="9" fill="#232F3E"/>
 <text x="741" y="184" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">4a</text>
-<rect x="856" y="589" width="143" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="928" y="600" font-size="10" text-anchor="middle" fill="#5F5E5A">dispatch: stubs-published</text>
-<circle cx="846" cy="596" r="9" fill="#232F3E"/>
-<text x="846" y="599" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">4b</text>
-<rect x="1108" y="241" width="94" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="1156" y="252" font-size="10" text-anchor="middle" fill="#5F5E5A">approved → apply</text>
-<circle cx="1097" cy="248" r="9" fill="#232F3E"/>
-<text x="1097" y="251" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">5</text>
+<rect x="863" y="589" width="143" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="934" y="600" font-size="10" text-anchor="middle" fill="#5F5E5A">dispatch: stubs-published</text>
+<circle cx="852" cy="596" r="9" fill="#232F3E"/>
+<text x="852" y="599" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">4b</text>
+<rect x="1108" y="365" width="94" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="1155" y="376" font-size="10" text-anchor="middle" fill="#5F5E5A">approved → apply</text>
+<circle cx="1097" cy="372" r="9" fill="#232F3E"/>
+<text x="1097" y="376" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">5</text>
 <rect x="1214" y="264" width="132" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
 <text x="1280" y="275" font-size="10" text-anchor="middle" fill="#185FA5">OIDC assume deploy role</text>
 <rect x="1350" y="281" width="100" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
 <text x="1400" y="292" font-size="10" text-anchor="middle" fill="#5F5E5A">provision runtime</text>
 <circle cx="1339" cy="288" r="9" fill="#232F3E"/>
 <text x="1339" y="291" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">6a</text>
-<rect x="1340" y="452" width="100" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="1390" y="463" font-size="10" text-anchor="middle" fill="#5F5E5A">provision Lambdas</text>
-<circle cx="1329" cy="459" r="9" fill="#232F3E"/>
-<text x="1329" y="462" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">6b</text>
-<rect x="924" y="355" width="159" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="1003" y="366" font-size="10" text-anchor="middle" fill="#5F5E5A">image pull (agent_image_uri)</text>
+<rect x="1340" y="446" width="100" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="1390" y="456" font-size="10" text-anchor="middle" fill="#5F5E5A">provision Lambdas</text>
+<circle cx="1329" cy="452" r="9" fill="#232F3E"/>
+<text x="1329" y="456" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">6b</text>
+<rect x="1208" y="329" width="159" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="1288" y="340" font-size="10" text-anchor="middle" fill="#5F5E5A">image pull (agent_image_uri)</text>
 <rect x="1093" y="509" width="94" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
 <text x="1140" y="520" font-size="10" text-anchor="middle" fill="#5F5E5A">s3_key + OpenAPI</text>
 <rect x="1476" y="169" width="78" height="15" fill="#FFFFFF" fill-opacity="0.95"/>

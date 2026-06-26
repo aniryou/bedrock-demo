@@ -22,14 +22,14 @@
 <polyline points="96,320 184,320" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="300,142 300,218 210,218 210,294" fill="none" stroke="#185FA5" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ab)"/>
 <polyline points="236,320 424,320" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="424,346 424,395 380,395 380,444" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
+<polyline points="437,346 437,395 380,395 380,444" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="380,496 380,574" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="476,346 540,346 540,444 604,444" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
+<polyline points="476,333 540,333 540,457 604,457" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
 <polyline points="476,320 664,320" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="690,294 690,92 300,92 300,90" fill="none" stroke="#185FA5" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ab)"/>
-<polyline points="716,294 820,294 820,222 924,222" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
+<polyline points="716,307 820,307 820,222 924,222" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="716,320 820,320 820,318 924,318" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="716,346 820,346 820,414 924,414" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
+<polyline points="716,333 820,333 820,414 924,414" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="976,414 1100,414 1100,318 1224,318" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="950,440 950,574" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
 <image x="44" y="294" width="52" height="52" xlink:href="data:image/png;base64,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"/>
@@ -57,36 +57,36 @@
 <text x="330" y="282" font-size="10" text-anchor="middle" fill="#5F5E5A">Invoke Runtime (Bearer JWT)</text>
 <circle cx="242" cy="278" r="9" fill="#232F3E"/>
 <text x="242" y="281" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">3</text>
-<rect x="344" y="395" width="73" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="380" y="406" font-size="10" text-anchor="middle" fill="#5F5E5A">invoke model</text>
-<circle cx="333" cy="402" r="9" fill="#232F3E"/>
-<text x="333" y="405" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">4</text>
+<rect x="344" y="391" width="73" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="380" y="402" font-size="10" text-anchor="middle" fill="#5F5E5A">invoke model</text>
+<circle cx="333" cy="398" r="9" fill="#232F3E"/>
+<text x="333" y="401" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">4</text>
 <rect x="325" y="536" width="111" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
 <text x="380" y="547" font-size="10" text-anchor="middle" fill="#5F5E5A">validate guardrails</text>
 <circle cx="314" cy="543" r="9" fill="#232F3E"/>
 <text x="314" y="547" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">5</text>
-<rect x="493" y="393" width="94" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="540" y="404" font-size="10" text-anchor="middle" fill="#5F5E5A">store / retrieve</text>
-<circle cx="482" cy="400" r="9" fill="#232F3E"/>
-<text x="482" y="403" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">6</text>
+<rect x="493" y="394" width="94" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="540" y="405" font-size="10" text-anchor="middle" fill="#5F5E5A">store / retrieve</text>
+<circle cx="482" cy="401" r="9" fill="#232F3E"/>
+<text x="482" y="404" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">6</text>
 <rect x="493" y="271" width="154" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
 <text x="570" y="282" font-size="10" text-anchor="middle" fill="#5F5E5A">MCP tools call (+ user JWT)</text>
 <circle cx="482" cy="278" r="9" fill="#232F3E"/>
 <text x="482" y="281" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">7</text>
 <rect x="536" y="81" width="165" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
 <text x="619" y="92" font-size="10" text-anchor="middle" fill="#185FA5">OBO token exchange (per-user)</text>
-<rect x="781" y="247" width="78" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="820" y="258" font-size="10" text-anchor="middle" fill="#5F5E5A">SigV4 (agent)</text>
-<circle cx="770" cy="254" r="9" fill="#232F3E"/>
-<text x="770" y="257" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">8a</text>
-<rect x="801" y="307" width="78" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="840" y="318" font-size="10" text-anchor="middle" fill="#5F5E5A">SigV4 (agent)</text>
-<circle cx="790" cy="314" r="9" fill="#232F3E"/>
-<text x="790" y="317" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">8b</text>
-<rect x="770" y="397" width="100" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
-<text x="820" y="408" font-size="10" text-anchor="middle" fill="#5F5E5A">OBO Bearer (user)</text>
-<circle cx="759" cy="404" r="9" fill="#232F3E"/>
-<text x="759" y="407" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">8c</text>
+<rect x="781" y="254" width="78" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="820" y="264" font-size="10" text-anchor="middle" fill="#5F5E5A">SigV4 (agent)</text>
+<circle cx="770" cy="260" r="9" fill="#232F3E"/>
+<text x="770" y="264" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">8a</text>
+<rect x="801" y="322" width="78" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="840" y="333" font-size="10" text-anchor="middle" fill="#5F5E5A">SigV4 (agent)</text>
+<circle cx="790" cy="329" r="9" fill="#232F3E"/>
+<text x="790" y="332" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">8b</text>
+<rect x="770" y="391" width="100" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="820" y="402" font-size="10" text-anchor="middle" fill="#5F5E5A">OBO Bearer (user)</text>
+<circle cx="759" cy="398" r="9" fill="#232F3E"/>
+<text x="759" y="402" font-size="10" font-weight="600" text-anchor="middle" fill="#FFFFFF">8c</text>
 <rect x="1044" y="389" width="165" height="15" fill="#FFFFFF" fill-opacity="0.95"/>
 <text x="1126" y="400" font-size="10" text-anchor="middle" fill="#5F5E5A">OAUTH → run as the user · RLS</text>
 <circle cx="1033" cy="396" r="9" fill="#232F3E"/>
