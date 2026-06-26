@@ -2895,5 +2895,375 @@
    }
   ],
   "notes": "Detailed/annotated sibling of system-overview (reuses its layout): adds the explicit Cedar ENFORCE node, numbers the request path 1-6, and spells out the identity/OBO/RLS chain in the labels. Egress split: sap/orders SigV4 (agent identity), snowflake Entra-OBO Bearer (the signed-in user). snowflake-query Lambda has two auth paths (user OBO | service KEYPAIR_JWT, in its sub); the order-actions->snowflake status check and the Snowflake EXTERNAL_OAUTH upn->user/scp->role mapping are in the Wire-level Mermaid. snowflake/Snowflake is external (ap-southeast-1); Observability is the grey control plane."
+ },
+ {
+  "key": "devops",
+  "title": "DevOps / CI-CD architecture — order-triage AgentCore",
+  "subtitle": "Single-repo, path-filtered pipeline: a merge to main routes by folder to per-folder CI + the agent-build / stubs-release publishers (ECR image · S3 zips/KB), which repository_dispatch into a human-gated, OIDC-auth terraform apply",
+  "desc": "Delivery plane of the mono-repo: a push/merge to aniryou/bedrock-demo triggers path-filtered GitHub Actions — per-folder *-ci validation, agent-build (bakes in-tree knowledge -> ARM64 image to ECR + KB docs to S3) on agent/ or knowledge/ changes, and stubs-release (Lambda zips + OpenAPI to S3) on stubs/ changes. The publishers repository_dispatch (agent-image-published / stubs-published) into the gated deploy.yml, which blocks on a manual approval, assumes the deploy OIDC role (env:production), runs preflight, and terraform apply's against S3 remote state into the live AgentCore stack.",
+  "size": {
+   "w": 1820,
+   "h": 820
+  },
+  "nodes": [
+   {
+    "key": "dev",
+    "x": 90,
+    "y": 360,
+    "icon": "user",
+    "title": "Developer",
+    "sub": "git push · PR · merge to main",
+    "label": "below"
+   },
+   {
+    "key": "monorepo",
+    "x": 300,
+    "y": 360,
+    "icon": "github",
+    "title": "aniryou/bedrock-demo",
+    "sub": "agent · knowledge · stubs · infra · app",
+    "label": "below"
+   },
+   {
+    "key": "ci",
+    "x": 430,
+    "y": 640,
+    "icon": "ghactions",
+    "title": "Path-filtered CI",
+    "sub": "*-ci · ruff · pytest · tf · ontology",
+    "label": "below"
+   },
+   {
+    "key": "agentbuild",
+    "x": 580,
+    "y": 250,
+    "icon": "ghactions",
+    "title": "agent-build.yml",
+    "sub": "bakes in-tree knowledge · arm64",
+    "label": "below"
+   },
+   {
+    "key": "stubsrel",
+    "x": 580,
+    "y": 480,
+    "icon": "ghactions",
+    "title": "stubs-release.yml",
+    "sub": "Lambda zips + OpenAPI",
+    "label": "below"
+   },
+   {
+    "key": "ecr",
+    "x": 820,
+    "y": 300,
+    "icon": "ecr",
+    "title": "Amazon ECR",
+    "sub": "arm64 image :sha + :latest",
+    "label": "below"
+   },
+   {
+    "key": "s3art",
+    "x": 820,
+    "y": 480,
+    "icon": "s3",
+    "title": "S3 artifacts",
+    "sub": "stub zips · OpenAPI · kb/ docs",
+    "label": "below"
+   },
+   {
+    "key": "approval",
+    "x": 1060,
+    "y": 290,
+    "icon": "shield",
+    "title": "deploy.yml · Manual approval",
+    "sub": "issue gate · env:production",
+    "label": "below"
+   },
+   {
+    "key": "oidc",
+    "x": 1280,
+    "y": 170,
+    "icon": "iam",
+    "title": "GitHub OIDC role",
+    "sub": "deploy · env:production trust",
+    "label": "below"
+   },
+   {
+    "key": "tfapply",
+    "x": 1280,
+    "y": 380,
+    "icon": "terraform",
+    "title": "Apply · deploy.yml",
+    "sub": "S3 remote state · preflight",
+    "label": "below"
+   },
+   {
+    "key": "runtime",
+    "x": 1500,
+    "y": 330,
+    "icon": "bedrock",
+    "title": "AgentCore Runtime + Gateway",
+    "sub": "Cedar · OBO broker",
+    "label": "below"
+   },
+   {
+    "key": "lambdas",
+    "x": 1500,
+    "y": 520,
+    "icon": "lambda",
+    "title": "Stub Lambdas",
+    "sub": "sap · order-actions · snowflake",
+    "label": "below"
+   },
+   {
+    "key": "cw",
+    "x": 1680,
+    "y": 180,
+    "icon": "cloudwatch",
+    "title": "CloudWatch",
+    "sub": "logs · X-Ray · dashboards · SLOs",
+    "label": "below"
+   }
+  ],
+  "groups": [
+   {
+    "label": "Source & CI · GitHub · aniryou/bedrock-demo (mono-repo)",
+    "dashed": false,
+    "nodes": [
+     "monorepo",
+     "ci",
+     "agentbuild",
+     "stubsrel"
+    ],
+    "pad": 30
+   },
+   {
+    "label": "Artifacts · AWS",
+    "dashed": true,
+    "nodes": [
+     "ecr",
+     "s3art"
+    ],
+    "pad": 26
+   },
+   {
+    "label": "Gated deploy · deploy.yml",
+    "dashed": true,
+    "nodes": [
+     "approval",
+     "oidc",
+     "tfapply"
+    ],
+    "pad": 26
+   },
+   {
+    "label": "Live AgentCore · us-west-2",
+    "dashed": false,
+    "nodes": [
+     "runtime",
+     "lambdas",
+     "cw"
+    ],
+    "pad": 28
+   }
+  ],
+  "edges": [
+   {
+    "s": "dev",
+    "d": "monorepo",
+    "kind": "req",
+    "label": "push · merge to main",
+    "n": "1",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "monorepo",
+    "d": "agentbuild",
+    "kind": "req",
+    "label": "on agent/** · knowledge/**",
+    "n": "2a",
+    "ss": "tr",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "monorepo",
+    "d": "stubsrel",
+    "kind": "req",
+    "label": "on stubs/**",
+    "n": "2b",
+    "ss": "br",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "monorepo",
+    "d": "ci",
+    "kind": "sup",
+    "label": "PR validate · lint · test",
+    "n": null,
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "agentbuild",
+    "d": "ecr",
+    "kind": "req",
+    "label": "buildx push arm64",
+    "n": "3a",
+    "ss": "r",
+    "ds": "l",
+    "via": [
+     [
+      700,
+      250
+     ],
+     [
+      700,
+      300
+     ]
+    ]
+   },
+   {
+    "s": "agentbuild",
+    "d": "s3art",
+    "kind": "req",
+    "label": "sync KB docs",
+    "n": "3b",
+    "ss": "b",
+    "ds": "t",
+    "via": [
+     [
+      580,
+      420
+     ],
+     [
+      820,
+      420
+     ]
+    ]
+   },
+   {
+    "s": "stubsrel",
+    "d": "s3art",
+    "kind": "req",
+    "label": "zips + OpenAPI",
+    "n": "3c",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "agentbuild",
+    "d": "approval",
+    "kind": "req",
+    "label": "dispatch: agent-image-published",
+    "n": "4a",
+    "ss": "t",
+    "ds": "t",
+    "via": [
+     [
+      580,
+      185
+     ],
+     [
+      1060,
+      185
+     ]
+    ]
+   },
+   {
+    "s": "stubsrel",
+    "d": "approval",
+    "kind": "req",
+    "label": "dispatch: stubs-published",
+    "n": "4b",
+    "ss": "b",
+    "ds": "br",
+    "via": [
+     [
+      580,
+      600
+     ],
+     [
+      1086,
+      600
+     ]
+    ]
+   },
+   {
+    "s": "approval",
+    "d": "tfapply",
+    "kind": "req",
+    "label": "approved → apply",
+    "n": "5",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "oidc",
+    "d": "tfapply",
+    "kind": "id",
+    "label": "OIDC assume deploy role",
+    "n": null,
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "tfapply",
+    "d": "runtime",
+    "kind": "req",
+    "label": "provision runtime",
+    "n": "6a",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "tfapply",
+    "d": "lambdas",
+    "kind": "req",
+    "label": "provision Lambdas",
+    "n": "6b",
+    "ss": "br",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "ecr",
+    "d": "runtime",
+    "kind": "sup",
+    "label": "image pull (agent_image_uri)",
+    "n": null,
+    "ss": "r",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "s3art",
+    "d": "lambdas",
+    "kind": "sup",
+    "label": "s3_key + OpenAPI",
+    "n": null,
+    "ss": "b",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "cw",
+    "kind": "sup",
+    "label": "logs · traces",
+    "n": null,
+    "ss": "t",
+    "ds": "l",
+    "via": null
+   }
+  ],
+  "notes": "Mono-repo replacement for the retired 5-repo repository_dispatch cascade: ONE repo with folders, path filters route a change to the right workflow. Knowledge is baked in-tree — agent-build triggers on BOTH agent/** and knowledge/** and runs `make skills` over the local ../knowledge (no cross-repo fetch, no SKILLS_TOKEN). The two publishers still repository_dispatch into deploy.yml, but intra-repo (stubs-release uses a PAT because GITHUB_TOKEN dispatches don't start new runs). Deploy is human-gated (trstringer/manual-approval + environment:production) BEFORE any AWS creds; OIDC trust pinned to repo:aniryou/bedrock-demo:environment:production. Dispatch edges use distinct source anchors + outer lanes (high for agent, low for stubs) so each origin is traceable; the CI PR-validate lane is grey/supporting (no artifact)."
  }
 ]

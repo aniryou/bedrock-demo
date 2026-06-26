@@ -65,16 +65,15 @@ CI/CD (auto-publish cascade + human-gated apply) is documented in `docs/playbook
   Related → Context → Decision → Options → Consequences → Risks → Action items → References).
   Keep the README **current-state only** — the "why / how we got here" belongs in ADRs. Keep the
   ADRs current as decisions change and consistent with the rest of the 5-repo split.
-- **Don't hand-edit generated diagrams.** The eight AWS-style diagrams `docs/architecture/*-architecture.svg`
-  — the `system-overview` hero, the detailed `data-plane`, and six cross-section planes (agent, knowledge,
-  security, memory, observability, evaluation) — come from the **`architecture-skill`** skill. The renderer
-  (`_archviz.py` + `generate.py`) is **not vendored here**; only the editable source `docs/architecture/specs.json`
-  lives in the repo. To edit/add/convert one: change `specs.json` (node/edge/group grammar lives in the skill's
-  `_archviz.py`) and **regenerate by running the skill on `specs.json`** (it emits `.svg` + `.png`; `brew install
-  librsvg` for the PNG fallbacks). **Use that skill for any new "AWS-style" architecture diagram.** Never
-  hand-edit the SVG. A re-authored **DevOps / CI-CD** plane (for the mono-repo's path-filtered pipeline) is
-  still pending. Any remaining Mermaid (ADRs, or `data-plane.md`'s wire-level view) → run the `mermaid-check`
-  skill before committing.
+- **Don't hand-edit generated diagrams.** The nine AWS-style diagrams `docs/architecture/*-architecture.svg`
+  — the `system-overview` hero, the detailed `data-plane`, and seven cross-section planes (agent, knowledge,
+  security, memory, observability, evaluation, devops) — come from the **`architecture-skill`** skill. The
+  renderer (`_archviz.py` + `generate.py`) is **not vendored here**; only the editable source
+  `docs/architecture/specs.json` lives in the repo. To edit/add/convert one: change `specs.json` (node/edge/group
+  grammar lives in the skill's `_archviz.py`) and **regenerate by running the skill on `specs.json`** (it emits
+  `.svg` + `.png`; `brew install librsvg` for the PNG fallbacks). **Use that skill for any new "AWS-style"
+  architecture diagram.** Never hand-edit the SVG. Any remaining Mermaid (ADRs, or the `data-plane.md` /
+  `devops-architecture.md` wire-level views) → run the `mermaid-check` skill before committing.
 - Branch off `main`; PRs are **squash-merged** once CI (`python` lint, `iac`) is green.
 - **Work in your own git worktree** so parallel agents don't collide on the shared checkout.
   Default location (a shared root outside the repo): `git worktree add
