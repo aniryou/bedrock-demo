@@ -20,8 +20,8 @@ others' *published artifacts* as inputs — it does not build them:
   with the AWS stack. `make entra-setup` (az CLI) is the imperative alternative.
 - `snowflake/` — `setup.sql`, `rls.sql`, `semantic_view.sql` (the `ORDERS_SV` Cortex-Analyst model,
   ADR-0008), `test_user.sql` (applied outside the main apply via `make apply-sql FILES=...`).
-- `docs/` — `architecture.md` (detailed mermaid data plane), `architecture_diagram.py`
-  (→ `system-architecture.svg/.png`), `adr/` (decisions), `architecture/` (subsystem diagrams),
+- `docs/` — `adr/` (decisions), `architecture/` (the AWS-style plane diagrams + their `specs.json`
+  source, the `system-overview` hero, and the detailed `data-plane.md`),
   `playbooks/` (runbooks: cd-setup · entra-obo-setup · snowflake-bootstrap · deploy · observability-impl-plan),
   `research/` (spikes & audits behind the ADRs).
 - Config is a **single `../.env`** at the workspace root (gitignored); `make` resolves `TF_VAR_*`
@@ -65,15 +65,16 @@ CI/CD (auto-publish cascade + human-gated apply) is documented in `docs/playbook
   Related → Context → Decision → Options → Consequences → Risks → Action items → References).
   Keep the README **current-state only** — the "why / how we got here" belongs in ADRs. Keep the
   ADRs current as decisions change and consistent with the rest of the 5-repo split.
-- **Don't hand-edit generated diagrams.** Top-level `docs/system-architecture.svg/.png` ← edit the
-  `NODES`/`EDGES`/`GROUPS` tables in `docs/architecture_diagram.py`. The six AWS-style plane diagrams
-  `docs/architecture/*-architecture.svg` come from the **`aws-architecture-diagram` skill** — its
-  renderer is vendored here as `docs/architecture/_awsviz.py` (+ `generate.py`). To edit/add/convert
-  one: change `docs/architecture/specs.json` (node/edge/group grammar lives in `_awsviz.py`) and re-run
-  `uv run --with diagrams python docs/architecture/generate.py` (`brew install librsvg` for the `.png`
-  fallbacks). **Use that skill for any new "AWS-style" architecture diagram** — it carries the icon set,
-  elbow-connector routing, and the zone/grid conventions. Re-run, never hand-edit the SVG. Any remaining
-  Mermaid (e.g. in ADRs) → run the `mermaid-check` skill before committing.
+- **Don't hand-edit generated diagrams.** The eight AWS-style diagrams `docs/architecture/*-architecture.svg`
+  — the `system-overview` hero, the detailed `data-plane`, and six cross-section planes (agent, knowledge,
+  security, memory, observability, evaluation) — come from the **`architecture-skill`** skill. The renderer
+  (`_archviz.py` + `generate.py`) is **not vendored here**; only the editable source `docs/architecture/specs.json`
+  lives in the repo. To edit/add/convert one: change `specs.json` (node/edge/group grammar lives in the skill's
+  `_archviz.py`) and **regenerate by running the skill on `specs.json`** (it emits `.svg` + `.png`; `brew install
+  librsvg` for the PNG fallbacks). **Use that skill for any new "AWS-style" architecture diagram.** Never
+  hand-edit the SVG. A re-authored **DevOps / CI-CD** plane (for the mono-repo's path-filtered pipeline) is
+  still pending. Any remaining Mermaid (ADRs, or `data-plane.md`'s wire-level view) → run the `mermaid-check`
+  skill before committing.
 - Branch off `main`; PRs are **squash-merged** once CI (`python` lint, `iac`) is green.
 - **Work in your own git worktree** so parallel agents don't collide on the shared checkout.
   Default location (a shared root outside the repo): `git worktree add
@@ -97,6 +98,6 @@ CI/CD (auto-publish cascade + human-gated apply) is documented in `docs/playbook
   this file lean — correct stale lines rather than appending new ones.
 
 ## Pointers
-- System diagram + deploy pipeline: `README.md`. Detailed runtime data plane: `docs/architecture.md`.
+- System diagram + deploy pipeline: `README.md`. Detailed runtime data plane: `docs/architecture/data-plane.md`.
 - Decisions: `docs/adr/0001`(OBO) · `0002`(memory) · `0003`(guardrail) · `0004`(observability/FinOps) · `0005`(evaluations) · `0006`(gateway-role least-privilege) · `0007`(actor-resolution) · `0008`(semantic-view + Cortex Analyst) · `0009`(snowflake Function URL direct-call hardening — deferred).
 - Runbooks (`docs/playbooks/`): Snowflake seed `snowflake-bootstrap.md` · deploy/teardown `deploy.md` · OBO `entra-obo-setup.md` · CI/CD `cd-setup.md` · observability `observability-impl-plan.md`. Spikes/audits: `docs/research/`. Entra apps as TF: `entra/README.md`.

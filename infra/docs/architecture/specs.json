@@ -30,7 +30,7 @@
    {
     "key": "entra",
     "x": 300,
-    "y": 140,
+    "y": 116,
     "icon": "entra",
     "title": "Microsoft Entra ID",
     "sub": "user IdP · brokers per-user OBO",
@@ -314,7 +314,7 @@
     "y": 330,
     "icon": "client",
     "title": "Caller",
-    "sub": "InvokeAgentRuntime + JWT",
+    "sub": "invoke + JWT",
     "label": "below"
    },
    {
@@ -489,7 +489,7 @@
     "s": "caller",
     "d": "runtime",
     "kind": "req",
-    "label": "InvokeAgentRuntime (Bearer JWT)",
+    "label": "Bearer JWT",
     "n": "1",
     "ss": null,
     "ds": null,
@@ -748,7 +748,7 @@
   ],
   "groups": [
    {
-    "label": "AgentCore Runtime (order_triage) · us-west-2",
+    "label": "AgentCore Runtime · us-west-2",
     "dashed": false,
     "nodes": [
      "rt",
@@ -829,7 +829,7 @@
     "label": "actor_id partition key",
     "n": null,
     "ss": "b",
-    "ds": "l",
+    "ds": "b",
     "via": [
      [
       300,
@@ -857,14 +857,9 @@
     "kind": "req",
     "label": "4 persist raw event",
     "n": "4",
-    "ss": "tr",
+    "ss": "t",
     "ds": "l",
-    "via": [
-     [
-      790,
-      150
-     ]
-    ]
+    "via": null
    },
    {
     "s": "stevents",
@@ -912,18 +907,9 @@
     "kind": "sup",
     "label": "in-session replay",
     "n": null,
-    "ss": "bl",
+    "ss": "b",
     "ds": "tr",
-    "via": [
-     [
-      1030,
-      230
-     ],
-     [
-      855,
-      230
-     ]
-    ]
+    "via": null
    },
    {
     "s": "mem",
@@ -931,18 +917,9 @@
     "kind": "req",
     "label": "on MessageAddedEvent",
     "n": "7",
-    "ss": "br",
+    "ss": "r",
     "ds": "t",
-    "via": [
-     [
-      790,
-      580
-     ],
-     [
-      1030,
-      580
-     ]
-    ]
+    "via": null
    },
    {
     "s": "retrieve",
@@ -990,15 +967,11 @@
     "kind": "req",
     "label": "9 prepend <user_context>",
     "n": "9",
-    "ss": "l",
+    "ss": "b",
     "ds": "b",
     "via": [
      [
-      640,
-      490
-     ],
-     [
-      640,
+      790,
       560
      ],
      [
@@ -2062,8 +2035,17 @@
     "label": "Retrieve policies",
     "n": null,
     "ss": "b",
-    "ds": "tl",
-    "via": null
+    "ds": "t",
+    "via": [
+     [
+      470,
+      585
+     ],
+     [
+      640,
+      585
+     ]
+    ]
    },
    {
     "s": "runtime",
@@ -2183,6 +2165,735 @@
     ]
    }
   ],
-  "notes": "Hero map of the whole system: every major component is one icon with its parts folded into the sub-line. Main request spine numbered 1..7 with a 6a/6b/6c fan-out at the Gateway (SigV4 for SAP/orders, OBO Bearer for snowflake). KB and Memory are supporting reads off the Runtime; the Guardrail hangs off the model path (async PROMPT_ATTACK filter); Secrets Manager backs the snowflake-query Lambda. CloudWatch is the grey control plane — Runtime and Gateway telemetry route along the top band above the Lambda cluster so no edge crosses a node. The OBO token-exchange identity edge loops across the very top to Entra, matching the security plane. Faithful to docs/architecture.md: model is Nova Lite (overrides the agent's claude-opus default), OBO is Gateway-brokered (agent carries no OBO code), snowflake-query has the two-path OBO|KEYPAIR_JWT auth."
+  "notes": "Hero map of the whole system: every major component is one icon with its parts folded into the sub-line. Main request spine numbered 1..7 with a 6a/6b/6c fan-out at the Gateway (SigV4 for SAP/orders, OBO Bearer for snowflake). KB and Memory are supporting reads off the Runtime; the Guardrail hangs off the model path (async PROMPT_ATTACK filter); Secrets Manager backs the snowflake-query Lambda. CloudWatch is the grey control plane — Runtime and Gateway telemetry route along the top band above the Lambda cluster so no edge crosses a node. The OBO token-exchange identity edge loops across the very top to Entra, matching the security plane. Faithful to docs/architecture/data-plane.md: model is Nova Lite (overrides the agent's claude-opus default), OBO is Gateway-brokered (agent carries no OBO code), snowflake-query has the two-path OBO|KEYPAIR_JWT auth."
+ },
+ {
+  "key": "knowledge",
+  "title": "Knowledge architecture — order-triage AgentCore",
+  "subtitle": "How the enterprise ontology (Objects + Actions), Skills and KB are structured and consumed: three LOCAL knowledge tools read the baked-in corpus; one Action binds to a Cedar-guarded Gateway MCP tool",
+  "desc": "Structural knowledge plane of the order-triage AgentCore agent: the knowledge corpus (42-object ontology + actions, skills, KB policy docs, compiled to a bindings.json reverse index) is baked into the agent image and consumed through three LOCAL tools — describe_entity (ontology), load_skill (skills), search_policies (Bedrock Knowledge Base over S3 Vectors). Ontology Actions bind to AgentCore Gateway MCP tools via ACTION_IMPLEMENTATIONS (Cedar ENFORCE), egressing to backend Lambdas.",
+  "size": {
+   "w": 1560,
+   "h": 820
+  },
+  "nodes": [
+   {
+    "key": "agent",
+    "x": 100,
+    "y": 380,
+    "icon": "bedrock",
+    "title": "Strands Agent",
+    "sub": "build_agent · tool host",
+    "label": "below"
+   },
+   {
+    "key": "describe",
+    "x": 340,
+    "y": 180,
+    "icon": "bedrock",
+    "title": "describe_entity",
+    "sub": "LOCAL · reverse index",
+    "label": "below"
+   },
+   {
+    "key": "loadskill",
+    "x": 340,
+    "y": 380,
+    "icon": "bedrock",
+    "title": "load_skill",
+    "sub": "LOCAL · skill body",
+    "label": "below"
+   },
+   {
+    "key": "searchpol",
+    "x": 340,
+    "y": 640,
+    "icon": "bedrock",
+    "title": "search_policies",
+    "sub": "LOCAL · k=3",
+    "label": "below"
+   },
+   {
+    "key": "objects",
+    "x": 600,
+    "y": 180,
+    "icon": "db",
+    "title": "Ontology · Objects",
+    "sub": "42 types · classification",
+    "label": "below"
+   },
+   {
+    "key": "actions",
+    "x": 830,
+    "y": 180,
+    "icon": "db",
+    "title": "Ontology · Actions",
+    "sub": "mutate · target · authority",
+    "label": "below"
+   },
+   {
+    "key": "skills",
+    "x": 600,
+    "y": 380,
+    "icon": "db",
+    "title": "Skills",
+    "sub": "appliesTo · invokes · reads",
+    "label": "below"
+   },
+   {
+    "key": "kbdocs",
+    "x": 600,
+    "y": 540,
+    "icon": "db",
+    "title": "KB policy docs",
+    "sub": "kb/*.md · chunk concerns",
+    "label": "below"
+   },
+   {
+    "key": "gateway",
+    "x": 1090,
+    "y": 380,
+    "icon": "apigw",
+    "title": "AgentCore Gateway",
+    "sub": "MCP · Cedar ENFORCE",
+    "label": "below"
+   },
+   {
+    "key": "backends",
+    "x": 1330,
+    "y": 380,
+    "icon": "lambda",
+    "title": "Backend Lambdas",
+    "sub": "sap · orders · snowflake/Cortex",
+    "label": "below"
+   },
+   {
+    "key": "kb",
+    "x": 1090,
+    "y": 640,
+    "icon": "bedrock",
+    "title": "Knowledge Base",
+    "sub": "Titan v2 · retrieve",
+    "label": "below"
+   },
+   {
+    "key": "s3v",
+    "x": 1330,
+    "y": 640,
+    "icon": "s3",
+    "title": "S3 Vectors",
+    "sub": "kb/ embeddings",
+    "label": "below"
+   }
+  ],
+  "groups": [
+   {
+    "label": "AWS Cloud · AgentCore (us-west-2)",
+    "dashed": false,
+    "nodes": [
+     "agent",
+     "describe",
+     "loadskill",
+     "searchpol",
+     "objects",
+     "actions",
+     "skills",
+     "kbdocs",
+     "gateway",
+     "backends",
+     "kb",
+     "s3v"
+    ],
+    "pad": 34
+   },
+   {
+    "label": "LOCAL knowledge tools — in-process",
+    "dashed": true,
+    "nodes": [
+     "describe",
+     "loadskill",
+     "searchpol"
+    ],
+    "pad": 26
+   },
+   {
+    "label": "Enterprise corpus · knowledge (baked into image)",
+    "dashed": true,
+    "nodes": [
+     "objects",
+     "actions",
+     "skills",
+     "kbdocs"
+    ],
+    "pad": 28
+   },
+   {
+    "label": "Execution surfaces",
+    "dashed": true,
+    "nodes": [
+     "gateway",
+     "backends",
+     "kb",
+     "s3v"
+    ],
+    "pad": 26
+   }
+  ],
+  "edges": [
+   {
+    "s": "agent",
+    "d": "describe",
+    "kind": "req",
+    "label": "describe_entity()",
+    "n": "1",
+    "ss": "tr",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "describe",
+    "d": "objects",
+    "kind": "req",
+    "label": "entity + bindings",
+    "n": "2",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "agent",
+    "d": "loadskill",
+    "kind": "req",
+    "label": "load_skill()",
+    "n": "3",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "loadskill",
+    "d": "skills",
+    "kind": "req",
+    "label": "skill playbook",
+    "n": "4",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "agent",
+    "d": "searchpol",
+    "kind": "req",
+    "label": "search_policies()",
+    "n": "5",
+    "ss": "bl",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "searchpol",
+    "d": "kb",
+    "kind": "req",
+    "label": "Retrieve k=3",
+    "n": "6",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "agent",
+    "d": "gateway",
+    "kind": "req",
+    "label": "MCP tool call (+ user JWT)",
+    "n": "7",
+    "ss": "br",
+    "ds": "b",
+    "via": null
+   },
+   {
+    "s": "gateway",
+    "d": "backends",
+    "kind": "req",
+    "label": "Cedar ENFORCE → egress",
+    "n": "8",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "actions",
+    "d": "objects",
+    "kind": "sup",
+    "label": "targets · authority",
+    "n": null,
+    "ss": "l",
+    "ds": "r",
+    "via": null
+   },
+   {
+    "s": "skills",
+    "d": "actions",
+    "kind": "sup",
+    "label": "invokes (apiName)",
+    "n": null,
+    "ss": "r",
+    "ds": "b",
+    "via": null
+   },
+   {
+    "s": "skills",
+    "d": "objects",
+    "kind": "sup",
+    "label": "appliesTo · reads",
+    "n": null,
+    "ss": "t",
+    "ds": "b",
+    "via": null
+   },
+   {
+    "s": "kbdocs",
+    "d": "kb",
+    "kind": "sup",
+    "label": "ingest · S3 → embed",
+    "n": null,
+    "ss": "r",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "kb",
+    "d": "s3v",
+    "kind": "sup",
+    "label": "vector search",
+    "n": null,
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "actions",
+    "d": "gateway",
+    "kind": "id",
+    "label": "raiseException → MCP tool",
+    "n": null,
+    "ss": "r",
+    "ds": "l",
+    "via": [
+     [
+      970,
+      180
+     ],
+     [
+      970,
+      380
+     ]
+    ]
+   }
+  ],
+  "notes": "Structural cut (asset relationships + consumption), not the per-turn loop (agent plane) or identity/OBO internals (security plane). The three knowledge surfaces map 1:1 to the three LOCAL tools; all are in-process and never traverse the Gateway. Corpus assets reference each other by stable apiName (Actions target Objects; Skills applyTo/read Objects + invoke Actions; KB chunks concern Objects) and compile to bindings.json (apiName -> skills/kb/actions). The single blue-dashed edge actions->Gateway is ACTION_IMPLEMENTATIONS ({raiseException: orders___flagOrder}), asserted by the startup coverage gate — the ontology declares the what, the agent binds the how (ADR-0001). KB docs are ingested (S3 sync -> Titan v2 embed) into the Bedrock KB; search_policies does a k=3 retrieve. The snowflake backend is one Cortex Analyst /ask over ORDERS_SV (ADR-0008). Only raiseException has a Gateway implementation today; the other two MCP tools (sap getCreditStatus, snowflake ask) are reads."
+ },
+ {
+  "key": "data-plane",
+  "title": "Detailed data plane — order-triage AgentCore",
+  "subtitle": "The full request/data flow of one InvokeAgentRuntime call: Entra CUSTOM_JWT in → Strands on Nova Lite → Cedar ENFORCE at the MCP Gateway → SigV4 (agent) vs Entra-OBO (user) egress → Snowflake EXTERNAL_OAUTH + RLS as the calling human",
+  "desc": "Detailed sibling of the system overview: same whole-system scope but expands the identity / authorization / OBO / RLS chain. One InvokeAgentRuntime call from an Entra-authenticated caller, through the AgentCore Runtime (CUSTOM_JWT) and the Cedar-guarded MCP Gateway, out to the stub Lambdas (SigV4 for sap/orders, Entra-OBO Bearer for snowflake), and into Snowflake as the signed-in human (EXTERNAL_OAUTH + RLS). Grey edges are the observability control plane.",
+  "size": {
+   "w": 1640,
+   "h": 820
+  },
+  "nodes": [
+   {
+    "key": "user",
+    "x": 70,
+    "y": 330,
+    "icon": "user",
+    "title": "Analyst",
+    "sub": "human caller",
+    "label": "below"
+   },
+   {
+    "key": "webapp",
+    "x": 210,
+    "y": 330,
+    "icon": "client",
+    "title": "Application",
+    "sub": "Entra sign-in (browser)",
+    "label": "below"
+   },
+   {
+    "key": "entra",
+    "x": 340,
+    "y": 150,
+    "icon": "entra",
+    "title": "Microsoft Entra ID",
+    "sub": "Users · OBO provider · agent app",
+    "label": "right"
+   },
+   {
+    "key": "runtime",
+    "x": 470,
+    "y": 330,
+    "icon": "bedrock",
+    "title": "AgentCore Runtime",
+    "sub": "Strands · ontology · skills · tools",
+    "label": "below"
+   },
+   {
+    "key": "model",
+    "x": 430,
+    "y": 490,
+    "icon": "bedrock",
+    "title": "Bedrock Nova Lite",
+    "sub": "amazon.nova-lite-v1:0",
+    "label": "below"
+   },
+   {
+    "key": "guard",
+    "x": 430,
+    "y": 640,
+    "icon": "shield",
+    "title": "Bedrock Guardrail",
+    "sub": "PROMPT_ATTACK filter",
+    "label": "below"
+   },
+   {
+    "key": "memory",
+    "x": 640,
+    "y": 490,
+    "icon": "db",
+    "title": "AgentCore Memory",
+    "sub": "short + long-term · per-user",
+    "label": "below"
+   },
+   {
+    "key": "kb",
+    "x": 640,
+    "y": 640,
+    "icon": "s3",
+    "title": "Knowledge Base",
+    "sub": "Titan v2 · S3 Vectors",
+    "label": "below"
+   },
+   {
+    "key": "gateway",
+    "x": 720,
+    "y": 330,
+    "icon": "apigw",
+    "title": "AgentCore Gateway",
+    "sub": "MCP endpoint · OBO broker",
+    "label": "below"
+   },
+   {
+    "key": "sap",
+    "x": 1000,
+    "y": 222,
+    "icon": "lambda",
+    "title": "SAP credit",
+    "sub": "SigV4 · AWS_IAM",
+    "label": "below"
+   },
+   {
+    "key": "orders",
+    "x": 1000,
+    "y": 330,
+    "icon": "lambda",
+    "title": "order-actions",
+    "sub": "SigV4 · flagOrder",
+    "label": "below"
+   },
+   {
+    "key": "snowl",
+    "x": 1000,
+    "y": 438,
+    "icon": "lambda",
+    "title": "snowflake-query",
+    "sub": "OBO Bearer | KEYPAIR_JWT",
+    "label": "below"
+   },
+   {
+    "key": "secrets",
+    "x": 1000,
+    "y": 640,
+    "icon": "secrets",
+    "title": "Secrets Manager",
+    "sub": "RSA key · OBO secret",
+    "label": "below"
+   },
+   {
+    "key": "snowflake",
+    "x": 1320,
+    "y": 438,
+    "icon": "snowflake",
+    "title": "Snowflake",
+    "sub": "EXTERNAL_OAUTH · RLS · tables",
+    "label": "below"
+   },
+   {
+    "key": "cw",
+    "x": 1450,
+    "y": 150,
+    "icon": "cloudwatch",
+    "title": "CloudWatch",
+    "sub": "logs · X-Ray · dashboards · SNS · SLO",
+    "label": "below"
+   },
+   {
+    "key": "cedar",
+    "x": 720,
+    "y": 150,
+    "icon": "shield",
+    "title": "Cedar Policy Engine",
+    "sub": "ENFORCE · OAuthUser · permit_*",
+    "label": "below"
+   }
+  ],
+  "groups": [
+   {
+    "label": "AWS Cloud · us-west-2",
+    "dashed": false,
+    "nodes": [
+     "runtime",
+     "model",
+     "guard",
+     "memory",
+     "kb",
+     "gateway",
+     "sap",
+     "orders",
+     "snowl",
+     "secrets",
+     "cw",
+     "cedar"
+    ],
+    "pad": 34
+   },
+   {
+    "label": "AWS Lambda · arm64 · Function URLs",
+    "dashed": true,
+    "nodes": [
+     "sap",
+     "orders",
+     "snowl"
+    ],
+    "pad": 20
+   },
+   {
+    "label": "Observability · control plane",
+    "dashed": true,
+    "nodes": [
+     "cw"
+    ],
+    "pad": 18
+   }
+  ],
+  "edges": [
+   {
+    "s": "user",
+    "d": "webapp",
+    "kind": "req",
+    "label": "sign in",
+    "n": "1",
+    "ss": null,
+    "ds": null,
+    "via": null
+   },
+   {
+    "s": "entra",
+    "d": "webapp",
+    "kind": "id",
+    "label": "user token · CUSTOM_JWT",
+    "n": "2",
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "webapp",
+    "d": "runtime",
+    "kind": "req",
+    "label": "InvokeAgentRuntime · Bearer JWT",
+    "n": "2",
+    "ss": null,
+    "ds": null,
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "model",
+    "kind": "req",
+    "label": "ConverseStream",
+    "n": "3",
+    "ss": "bl",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "model",
+    "d": "guard",
+    "kind": "id",
+    "label": "guardrailConfig · async",
+    "n": null,
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "memory",
+    "kind": "sup",
+    "label": "read / write context",
+    "n": null,
+    "ss": "br",
+    "ds": "tl",
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "kb",
+    "kind": "sup",
+    "label": "Retrieve policies",
+    "n": null,
+    "ss": "b",
+    "ds": "t",
+    "via": [
+     [
+      470,
+      585
+     ],
+     [
+      640,
+      585
+     ]
+    ]
+   },
+   {
+    "s": "runtime",
+    "d": "gateway",
+    "kind": "req",
+    "label": "MCP tool calls (+ user JWT)",
+    "n": "4",
+    "ss": null,
+    "ds": null,
+    "via": null
+   },
+   {
+    "s": "gateway",
+    "d": "entra",
+    "kind": "id",
+    "label": "OBO TOKEN_EXCHANGE · per-user",
+    "n": null,
+    "ss": "t",
+    "ds": "t",
+    "via": [
+     [
+      720,
+      100
+     ],
+     [
+      340,
+      100
+     ]
+    ]
+   },
+   {
+    "s": "gateway",
+    "d": "sap",
+    "kind": "req",
+    "label": "SigV4 · AWS_IAM",
+    "n": "5a",
+    "ss": "tr",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "gateway",
+    "d": "orders",
+    "kind": "req",
+    "label": "SigV4 · flagOrder",
+    "n": "5b",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "gateway",
+    "d": "snowl",
+    "kind": "req",
+    "label": "OBO Bearer",
+    "n": "5c",
+    "ss": "br",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "snowl",
+    "d": "snowflake",
+    "kind": "req",
+    "label": "OAUTH → as the human · RLS",
+    "n": "6",
+    "ss": "r",
+    "ds": "l",
+    "via": null
+   },
+   {
+    "s": "snowl",
+    "d": "secrets",
+    "kind": "sup",
+    "label": "RSA key + config",
+    "n": null,
+    "ss": "b",
+    "ds": "t",
+    "via": null
+   },
+   {
+    "s": "runtime",
+    "d": "cw",
+    "kind": "sup",
+    "label": "logs · token EMF · traces",
+    "n": null,
+    "ss": "t",
+    "ds": "l",
+    "via": [
+     [
+      470,
+      118
+     ],
+     [
+      1300,
+      118
+     ]
+    ]
+   },
+   {
+    "s": "gateway",
+    "d": "cw",
+    "kind": "sup",
+    "label": "logs · traces",
+    "n": null,
+    "ss": "t",
+    "ds": "b",
+    "via": [
+     [
+      720,
+      128
+     ],
+     [
+      1450,
+      128
+     ]
+    ]
+   },
+   {
+    "s": "gateway",
+    "d": "cedar",
+    "kind": "id",
+    "label": "authorize every call · ENFORCE",
+    "n": null,
+    "ss": "t",
+    "ds": "b",
+    "via": null
+   }
+  ],
+  "notes": "Detailed/annotated sibling of system-overview (reuses its layout): adds the explicit Cedar ENFORCE node, numbers the request path 1-6, and spells out the identity/OBO/RLS chain in the labels. Egress split: sap/orders SigV4 (agent identity), snowflake Entra-OBO Bearer (the signed-in user). snowflake-query Lambda has two auth paths (user OBO | service KEYPAIR_JWT, in its sub); the order-actions->snowflake status check and the Snowflake EXTERNAL_OAUTH upn->user/scp->role mapping are in the Wire-level Mermaid. snowflake/Snowflake is external (ap-southeast-1); Observability is the grey control plane."
  }
 ]
