@@ -1,24 +1,21 @@
 """Knowledge Bases tool — Amazon Bedrock Knowledge Base retrieval.
 
 `_kb_retrieve` queries the Bedrock Knowledge Base via the `bedrock-agent-runtime`
-`retrieve` API. `KNOWLEDGE_BASE_ID` is required (no local fallback). `make_kb_tool` wraps
-it in a strands `@tool` whose name and docstring are supplied per-agent.
+`retrieve` API against an explicit knowledge-base id and region. `make_kb_tool` wraps it in
+a strands `@tool` whose name and docstring are supplied per-agent.
 """
 
 from __future__ import annotations
 
 from strands import tool
 
-from agent_kit.config import get_config
 
-
-def _kb_retrieve(query: str, k: int = 3) -> str:
+def _kb_retrieve(query: str, knowledge_base_id: str, region: str, k: int = 3) -> str:
     import boto3
 
-    cfg = get_config()
-    client = boto3.client("bedrock-agent-runtime", region_name=cfg.aws_region)
+    client = boto3.client("bedrock-agent-runtime", region_name=region)
     resp = client.retrieve(
-        knowledgeBaseId=cfg.knowledge_base_id,
+        knowledgeBaseId=knowledge_base_id,
         retrievalQuery={"text": query},
         retrievalConfiguration={"vectorSearchConfiguration": {"numberOfResults": k}},
     )
@@ -33,7 +30,7 @@ def _kb_retrieve(query: str, k: int = 3) -> str:
     return "\n\n".join(out)
 
 
-def make_kb_tool(name: str, description: str):
+def make_kb_tool(name: str, description: str, knowledge_base_id: str, region: str = "us-west-2"):
     """Build a strands @tool with the given name and docstring that wraps _kb_retrieve.
 
     strands derives the tool name from the function `__name__` and the description from
@@ -42,7 +39,7 @@ def make_kb_tool(name: str, description: str):
     """
 
     def _kb(query: str) -> str:
-        return _kb_retrieve(query)
+        return _kb_retrieve(query, knowledge_base_id, region)
 
     _kb.__name__ = name
     _kb.__doc__ = description

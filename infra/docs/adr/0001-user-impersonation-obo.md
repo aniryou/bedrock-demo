@@ -8,7 +8,7 @@
 
 Today the order-triage agent invokes Snowflake, SAP, and the order-actions service using its **own service identity**. Authorization is single-sided — the Gateway/Cedar layer checks only that *the agent* may call a tool; there is no *user* dimension anywhere in the chain. Concretely:
 
-- **Inbound:** `aws_bedrockagentcore_gateway` is `authorizer_type = "AWS_IAM"` (SigV4 as the runtime role) — `../../terraform/gateway.tf`. The runtime entrypoint sees only `session_id` — `../../../lib/src/agent_kit/app.py` (the agent's `../../../agent/src/order_triage/runtime.py` is a thin `app = build_app(SPEC)`). No human identity reaches the runtime.
+- **Inbound:** `aws_bedrockagentcore_gateway` is `authorizer_type = "AWS_IAM"` (SigV4 as the runtime role) — `../../terraform/gateway.tf`. The runtime entrypoint sees only `session_id` — the agent's `../../../agent/src/order_triage/runtime.py` owns the `@app.entrypoint` loop on `BedrockAgentCoreApp` (calling `agent_kit` helpers). No human identity reaches the runtime.
 - **Authorization:** Cedar policies permit on `principal is AgentCore::IamEntity` + `principal.id like "*<runtime_role>*"` — `../../terraform/policy.tf`. Pure agent-identity authz.
 - **Outbound:** a static `X-API-Key` injected per target by AgentCore Identity API-key credential providers — `../../terraform/identity.tf`.
 - **Snowflake:** the query Lambda signs a `KEYPAIR_JWT` as **one** service user, role `AGENT_RO` (SELECT-only), against the SQL REST API — `../../../stubs/snowflake_stub/snowflake_client.py`. Every query runs as that single account.
@@ -130,10 +130,10 @@ Workload Identity Federation is **secretless workload auth**: it maps the agent'
 
 1. [x] **Spike (gating) — done.** Snowflake `EXTERNAL_OAUTH` (AZURE) integration proven end-to-end with Entra: a SQL REST call with `X-Snowflake-Authorization-Token-Type: OAUTH` runs as the mapped Snowflake user. Native (Option C) chosen.
 2. [x] **Ontology — done.** `authority` added to the ontology schema; actions classified; the default derived in `build/validate.py`; `governance.yaml` populated.
-3. [x] **Done.** Stood up **Microsoft Entra ID** (not Cognito); added `CUSTOM_JWT` inbound on the runtime; allowlisted `Authorization`; threaded the user identity through `../../../lib/src/agent_kit/app.py`.
+3. [x] **Done.** Stood up **Microsoft Entra ID** (not Cognito); added `CUSTOM_JWT` inbound on the runtime; allowlisted `Authorization`; threaded the user identity through the agent's `../../../agent/src/order_triage/runtime.py` (via `agent_kit.infra.identity`).
 4. [x] **Done.** Gateway flipped to `CUSTOM_JWT` (`terraform/gateway.tf`); `policy.tf` rewritten to `OAuthUser` with the Cedar guard `principal.hasTag("scp")`; the agent path pinned at the IAM/source layer.
 5. [x] **Snowflake done; SAP deferred.** OBO is now brokered by the **Gateway** (the snowflake target's `grant_type=TOKEN_EXCHANGE` egress in `terraform/snowflake_lambda.tf`), not in-agent. Snowflake External OAuth is live. SAP SAML-bearer OBO is **not yet wired** (open follow-up).
-6. [~] **Superseded by the gateway-only design.** Credential routing moved out of the agent: the Gateway brokers OBO per target and Cedar authorizes, so the agent no longer maps `action → credential path`. the spec's `action_implementations` map + `_assert_action_coverage()` (`agent_kit.knowledge.coverage`) remain as the skill→tool coverage gate.
+6. [~] **Superseded by the gateway-only design.** Credential routing moved out of the agent: the Gateway brokers OBO per target and Cedar authorizes, so the agent no longer maps `action → credential path`. The agent's `ACTIONS` map + `assert_action_coverage()` (`agent_kit.knowledge.coverage`) remain as the skill→tool coverage gate.
 7. [ ] **Fast-follow (open):** adopt Snowflake WIF for the Tier-0 service path (secretless; retire the key-pair).
 8. [x] **Done (re-shaped).** The CD pipeline presents user tokens to the JWT-inbound runtime; the former `bedrock-demo-orchestrator` was archived and its deploy/ops absorbed into `bedrock-demo-infra`.
 

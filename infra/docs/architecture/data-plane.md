@@ -159,8 +159,8 @@ model path — an async `PROMPT_ATTACK` input filter.
 
 > **Model id:** the diagram shows the *deployed* model, **Nova Lite**
 > (`amazon.nova-lite-v1:0` via `var.bedrock_model_id`). The agent's code default in
-> `agent_kit.config` is `anthropic.claude-opus-4-8`; the Terraform-injected env var overrides it
-> at deploy time.
+> `agent/src/order_triage/agent.py` (`BEDROCK_MODEL_ID` env) is `anthropic.claude-opus-4-8`;
+> the Terraform-injected env var overrides it at deploy time.
 
 **3 — Authorization (Cedar).** Every Gateway tool call is checked by the **Cedar Policy
 Engine** in `ENFORCE` mode. The principal is `AgentCore::OAuthUser`; the guard

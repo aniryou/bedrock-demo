@@ -11,13 +11,12 @@ supported. The loader degrades gracefully to an empty catalog when
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 
 import yaml
-
-from agent_kit.config import get_config
 
 
 @dataclass(frozen=True)
@@ -53,7 +52,7 @@ def _first_blockquote(text: str) -> str | None:
 
 class SkillLoader:
     def __init__(self, playbook_dir: Path | None = None):
-        self._dir = playbook_dir or get_config().skills_dir
+        self._dir = playbook_dir or Path(os.getenv("SKILLS_DIR", "skills"))
 
     @cached_property
     def _skills(self) -> dict[str, Skill]:

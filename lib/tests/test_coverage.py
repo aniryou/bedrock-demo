@@ -1,4 +1,4 @@
-"""Gateway action coverage — the startup gate (_assert_action_coverage)."""
+"""Gateway action coverage — the startup gate (assert_action_coverage)."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ def test_action_coverage_passes_when_action_is_served(monkeypatch):
     monkeypatch.setattr(
         coverage, "skill_loader", SimpleNamespace(required_actions=lambda: {"raiseException"})
     )
-    coverage._assert_action_coverage(
+    coverage.assert_action_coverage(
         [_fake_tool("orders___flagOrder")], {"raiseException": "orders___flagOrder"}
     )  # no raise
 
@@ -28,6 +28,6 @@ def test_action_coverage_raises_when_action_unserved(monkeypatch):
         coverage, "skill_loader", SimpleNamespace(required_actions=lambda: {"raiseException"})
     )
     with pytest.raises(coverage.SkillActionCoverageError):
-        coverage._assert_action_coverage(
+        coverage.assert_action_coverage(
             [_fake_tool("snowflake___ask")], {"raiseException": "orders___flagOrder"}
         )  # flagOrder absent

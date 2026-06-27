@@ -62,8 +62,8 @@ corpus build, so the cross-references are guaranteed resolvable.
 
 ### The one binding edge (blue dashed)
 `actions → AgentCore Gateway` is the **only** coupling between the enterprise corpus and the agent's
-concrete tools: `spec.action_implementations = {"raiseException": "orders___flagOrder"}`, checked at
-startup by `_assert_action_coverage()` (`agent_kit.knowledge.coverage`). The ontology never names a Gateway target; the agent owns
+concrete tools: the agent's `ACTIONS = {"raiseException": "orders___flagOrder"}`, checked at
+startup by `assert_action_coverage()` (`agent_kit.knowledge.coverage`). The ontology never names a Gateway target; the agent owns
 that map. This is what keeps the corpus reusable across agents (and why agent-specific heuristics
 like `score_order` stay in the agent, never promoted up to the ontology).
 
@@ -123,8 +123,8 @@ flowchart LR
 - **Agent toolkit** — the shared lib (`agent_kit`, consumed by `agent`):
   `knowledge/{ontology.py,skills.py,kb.py}` (the 3 LOCAL tools — `kb.py` via the `make_kb_tool`
   factory), `knowledge/skill_loader.py` (catalog + bodies), `knowledge/coverage.py`
-  (`get_tools`, `_assert_action_coverage`); the action map is `spec.action_implementations` on the
-  agent's `AgentSpec` (`agent/src/order_triage/spec.py`).
+  (`tools_with_coverage`, `assert_action_coverage`); the action map is the agent's `ACTIONS`
+  constant (`agent/src/order_triage/agent.py`).
 - **Infra** — `bedrock-demo-infra`: `terraform/gateway.tf` (3 MCP targets), `policy.tf` (Cedar
   `permit_*`), `knowledge_base.tf` (Titan v2 + S3 Vectors), `*_lambda.tf` (sap / orders / snowflake).
 

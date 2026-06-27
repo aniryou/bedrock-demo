@@ -6,11 +6,12 @@ A Snowflake-backed [Strands](https://strandsagents.com) order-triage agent that 
 orders **exclusively through the AgentCore Gateway's MCP tools** — Cedar-authorized and
 brokered on-behalf-of the signed-in user (`grant_type=TOKEN_EXCHANGE`) — and grounds every
 decision in policy playbooks plus a Bedrock Knowledge Base. This is the **agent
-component**, now a **thin consumer of the shared lib ([`agent_kit`](../lib/README.md))**: it
-supplies an `AgentSpec` and calls `build_app(SPEC)`, while the agent-agnostic runtime and
-knowledge plumbing live in [`../lib`](../lib/README.md). It ships as an arm64 image to ECR
-and publishes KB policy docs to S3, both consumed by `infra`; the backend reads/writes it
-performs never live here — they reach it as Gateway MCP tools at runtime.
+component**: it **owns its assembly** and composes the shared lib
+([`agent_kit`](../lib/README.md)) — it constructs its own `BedrockModel` (with its
+guardrail/model config), wires the AgentCore Runtime entrypoint, and calls `kit.*` helpers for
+the agent-agnostic plumbing. It ships as an arm64 image to ECR and publishes KB policy docs to
+S3, both consumed by `infra`; the backend reads/writes it performs never live here — they reach
+it as Gateway MCP tools at runtime.
 
 ## How it fits
 
@@ -18,21 +19,22 @@ The [bedrock-demo](../README.md) mono-repo has **six top-level folders** — the
 components (knowledge, agent, stubs, infra, app) plus the shared lib
 ([`agent_kit`](../lib/README.md)) the agent builds on — see
 [The components](../README.md#the-components) for the full map and hand-offs. This is the
-**agent component** — the Strands agent on Bedrock AgentCore Runtime — now a thin consumer of
-the shared lib: it supplies an `AgentSpec` and calls `build_app(SPEC)`, with the
-runtime/knowledge plumbing living in [`../lib`](../lib/README.md). It bakes in the
-[knowledge](../knowledge/README.md) layer (ontology + skills + KB) and produces the arm64
-image + KB docs that [infra](../infra/README.md) deploys.
+**agent component** — the Strands agent on Bedrock AgentCore Runtime — which **owns its
+assembly** and composes the shared lib: it writes its own `build_agent()` and the entrypoint
+loop, calling the `agent_kit` helpers for the agent-agnostic plumbing
+([`../lib`](../lib/README.md)). It bakes in the [knowledge](../knowledge/README.md) layer
+(ontology + skills + KB) and produces the arm64 image + KB docs that
+[infra](../infra/README.md) deploys.
 
 ## Repository structure
 
 ```text
 agent/
-├── src/order_triage/         # the thin per-agent package (the AgentSpec + entrypoint)
-│   ├── spec.py               # SPEC: the AgentSpec (agent_id, metric namespace, action_implementations, KB tool name/description)
-│   ├── runtime.py            # app = build_app(SPEC) — AgentCore entrypoint, assembled by agent_kit
+├── src/order_triage/         # the per-agent package (owns config + assembly + entrypoint)
+│   ├── agent.py              # config (model/region/guardrail/ACTIONS/KB tool/namespaces) + build_agent(): builds the BedrockModel (owns guardrails) + Strands Agent from kit.* helpers
+│   ├── runtime.py            # the @app.entrypoint loop on BedrockAgentCoreApp — forwards the JWT, opens the Gateway, streams, emits the EMF metric
 │   └── __init__.py           # package __version__
-├── tests/                    # per-agent hermetic tests (test_spec.py: skill→action coverage of SPEC)
+├── tests/                    # per-agent hermetic tests (test_spec.py: skill→action coverage of ACTIONS)
 ├── scripts/fetch_skills.sh   # copies skills + bindings + kb from the in-tree ../knowledge folder
 ├── Dockerfile                # arm64 image; REPO-ROOT build context — installs ../lib[deploy] then the agent
 ├── Makefile                  # setup · skills · test · lint · clean
@@ -47,10 +49,11 @@ agent/
 └── README.md
 ```
 
-All runtime and knowledge plumbing — prompt assembly, tool surface, `BedrockModel`, memory,
-identity, the Gateway MCP client, skill/ontology/KB loaders, the action-coverage gate, and
-the stream-step classifier — lives in the shared lib; see [`../lib/README.md`](../lib/README.md)
-for its internals.
+The agent owns assembly (`agent.py` builds the `BedrockModel` + Strands `Agent`; `runtime.py`
+drives the AgentCore entrypoint loop). The agent-agnostic plumbing it calls — prompt assembly,
+identity, the Gateway MCP client, memory, the EMF metric, skill/ontology/KB loaders, the
+action-coverage gate, and the stream-step classifier — are helpers in the shared lib; see
+[`../lib/README.md`](../lib/README.md) for their internals.
 
 `skills/`, `ontology/`, and `kb/` are **fetched content, not committed** — `make skills`
 copies them from the in-tree [`../knowledge`](../knowledge/README.md) folder (see below).
@@ -93,53 +96,55 @@ agent runs without them (empty catalog) but loses the `load_skill` playbooks.
 
 ## Architecture & visualizations
 
-The agent supplies an `AgentSpec` (`spec.py`) and calls `build_app(SPEC)` (`runtime.py`); the
-runtime itself is assembled by the shared lib ([`agent_kit`](../lib/README.md)) — `build_app`
-/ `build_agent` stand up a thin AgentCore entrypoint that builds one Strands agent per turn,
-forwards the inbound user JWT as the Gateway's bearer, and streams the answer back. The agent
-has two tool surfaces: **local tools** that run in-process (`search_policies` against the
-Knowledge Base, `describe_entity` over the ontology bindings, `load_skill` for playbooks) and
-**backend tools** that are injected at runtime and reached only through the Cedar-authorized,
+The agent owns assembly: `agent.py` holds the config and `build_agent()` (which constructs the
+`BedrockModel`, owning the guardrail/model config, and the Strands `Agent`), and `runtime.py`
+drives the `@app.entrypoint` AgentCore loop — it builds one Strands agent per turn, forwards
+the inbound user JWT as the Gateway's bearer, and streams the answer back. The agent calls the
+shared lib ([`agent_kit`](../lib/README.md)) for the agent-agnostic helpers. The agent has two
+tool surfaces: **local tools** that run in-process (`search_policies` against the Knowledge
+Base, `describe_entity` over the ontology bindings, `load_skill` for playbooks) and **backend
+tools** that are injected at runtime and reached only through the Cedar-authorized,
 OBO-brokered AgentCore Gateway. Skills, ontology bindings, and KB docs are copied from the
 in-tree `../knowledge` folder and baked into the image (KB docs are published to S3 instead).
 The runtime is entirely env-wired; the full variable contract lives in
-[`CLAUDE.md`](./CLAUDE.md), and the plumbing internals in [`../lib/README.md`](../lib/README.md).
+[`CLAUDE.md`](./CLAUDE.md), and the helper internals in [`../lib/README.md`](../lib/README.md).
 
-### System architecture (the agent as a thin consumer)
+### System architecture (the agent owns assembly)
 
-This component is thin: `spec.py` declares the `AgentSpec`, `runtime.py` calls
-`build_app(SPEC)`, and the shared lib ([`agent_kit`](../lib/README.md)) assembles the actual
-AgentCore runtime from that spec. The full runtime internals — the entrypoint, the per-turn
-Strands agent, the inline `BedrockModel`, memory, identity, the Gateway MCP client, the local
-tools, and the connections to Bedrock / Memory / KB / Gateway / Snowflake — are owned and
-diagrammed in [`../lib/README.md`](../lib/README.md).
+`agent.py` owns the config + `build_agent()` (the `BedrockModel` and Strands `Agent`),
+`runtime.py` owns the `@app.entrypoint` loop, and the shared lib
+([`agent_kit`](../lib/README.md)) provides the helpers both call. The helper internals — prompt
+assembly, identity, the Gateway MCP client, memory, the EMF metric, the local tools, and the
+connections to Bedrock / Memory / KB / Gateway / Snowflake — are documented in
+[`../lib/README.md`](../lib/README.md).
 
 ```mermaid
 flowchart TB
     caller["Caller — InvokeAgentRuntime<br/>(user JWT · CUSTOM_JWT inbound)"]
 
-    subgraph agentpkg["agent/ · src/order_triage (thin)"]
+    subgraph agentpkg["agent/ · src/order_triage (owns assembly + config)"]
         direction TB
-        spec["spec.py · SPEC (AgentSpec)<br/>agent_id · OrderTriage/Agent · action_implementations · KB tool"]
-        rt["runtime.py · app = build_app(SPEC)"]
-        spec --> rt
+        rt["runtime.py · @app.entrypoint loop<br/>BedrockAgentCoreApp · JWT → Gateway · stream · EMF"]
+        ba["agent.py · build_agent()<br/>BedrockModel (owns guardrails) + Strands Agent<br/>config: model · region · ACTIONS · KB tool · namespaces"]
+        rt --> ba
     end
 
-    kit["agent_kit · build_app / build_agent<br/>assembles the AgentCore runtime from SPEC"]
+    kit["agent_kit · kit.* helpers<br/>prompt · identity · gateway · memory · metrics · knowledge"]
     runtime["AgentCore Runtime<br/>(Strands agent · local + Gateway tools · Bedrock · Memory · KB)"]
 
     caller --> rt
-    rt --> kit
-    kit --> runtime
+    rt -->|calls helpers| kit
+    ba -->|calls helpers| kit
+    ba --> runtime
 
-    note["full agent_kit internals: ../lib/README.md"]
+    note["full agent_kit helper internals: ../lib/README.md"]
     kit -.-> note
 ```
 
-An optional native Bedrock Guardrail (a `PROMPT_ATTACK` input filter, on by default in the
-deployed stack) screens the model path; `agent_kit` injects `guardrailConfig` only when both
-guardrail vars are set. The container image + skills/ontology are built/baked by CI
-(`make skills` → `fetch_skills.sh` → `docker buildx`); see the
+A native Bedrock Guardrail (a `PROMPT_ATTACK` input filter, on by default in the deployed
+stack) screens the model path; **`agent.py` builds the guardrail kwargs onto its `BedrockModel`
+only when both guardrail vars are set**. The container image + skills/ontology are built/baked
+by CI (`make skills` → `fetch_skills.sh` → `docker buildx`); see the
 [build & deploy pipeline](#build--deploy-pipeline) below.
 
 ### Data flow (one triage request)
@@ -186,9 +191,10 @@ bindings don't know): the skill manifests (`skills/*.skill.md`) and the bindings
 reverse-index (`bindings.json`, plus the optional `ontology.compiled.json`). Two consumers
 read them:
 
-- **`agent_kit.knowledge.SkillLoader` → system prompt (build time).** `skills_catalog()`
-  renders each skill's description plus the ontology entities/actions it `appliesTo` into
-  `SYSTEM_PROMPT`; `load_skill(name)` returns the procedure body on demand.
+- **`agent_kit.knowledge.SkillLoader` → system prompt (build-agent time).** `skills_catalog()`
+  renders each skill's description plus the ontology entities/actions it `appliesTo` into the
+  system prompt that `kit.build_system_prompt()` returns; `load_skill(name)` returns the
+  procedure body on demand.
 - **`agent_kit.knowledge.OntologyLoader` → `describe_entity` tool (runtime, on-demand).** It reads
   `bindings.json`'s `index.objectType[x]` to answer "which skills / actions / KB govern this
   entity?", enriched with properties / primary key / source-of-truth datasource / related
@@ -222,11 +228,11 @@ flowchart TB
         odir["ONTOLOGY_DIR<br/>bindings.json (+ compiled)"]
     end
 
-    subgraph agent["Strands agent process (assembled by agent_kit)"]
+    subgraph agent["Strands agent process (assembled by the agent via kit.* helpers)"]
         direction TB
         sloader["agent_kit.knowledge SkillLoader<br/>skills_catalog() · get_skill()"]
         oloader["agent_kit.knowledge OntologyLoader<br/>describe_entity reverse-index"]
-        prompt["SYSTEM_PROMPT<br/>skill catalog + entity/action tags<br/>(baked at build_agent time)"]
+        prompt["system prompt<br/>skill catalog + entity/action tags<br/>(built by kit.build_system_prompt())"]
         subgraph tools["tool surface"]
             direction TB
             de["describe_entity(api_name)<br/>on-demand · zero prompt growth"]
@@ -266,7 +272,7 @@ flowchart LR
         direction TB
         skills["knowledge/<br/>ontology + skills + kb docs"]
         librepo["lib/<br/>agent_kit runtime toolkit"]
-        agentrepo["agent/<br/>AgentSpec + Dockerfile"]
+        agentrepo["agent/<br/>build_agent + runtime + Dockerfile"]
         stubsrepo["stubs/<br/>FastAPI stubs"]
         infrarepo["infra/<br/>Terraform + scripts"]
     end
@@ -318,9 +324,9 @@ wrapper and the `OrderTriage/Agent` EMF metric namespace) are documented in [`CL
 ## Key journeys
 
 - **One triage request through the runtime.** A caller invokes the runtime with a prompt and
-  the user's JWT; the `agent_kit`-built entrypoint (`build_app(SPEC)`) forwards that JWT as the
-  Gateway bearer and opens one MCP session for the turn, loading prior session context from
-  AgentCore Memory. The Strands
+  the user's JWT; the agent's `@app.entrypoint` loop (`runtime.py`) forwards that JWT as the
+  Gateway bearer and opens one MCP session for the turn, then calls `build_agent()` and loads
+  prior session context from AgentCore Memory. The Strands
   reasoning loop streams against the Bedrock model, calls local tools in-process, and routes
   every backend read/write through the Gateway (Cedar-authorized, OBO-brokered), then persists
   facts/summary and streams the answer back as NDJSON plus typed `__step__` timeline events.

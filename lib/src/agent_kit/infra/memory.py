@@ -7,7 +7,7 @@ block on the latest user message. `retrieval_config` (the `retrieval_namespaces`
 selects which namespaces to search; `actor_id` comes from the request identity, so the
 long-term namespaces are partitioned per user.
 
-`AGENTCORE_MEMORY_ID` is required. `session_id=None` => a stateless single-shot agent (no
+`memory_id` is required. `session_id=None` => a stateless single-shot agent (no
 persistence). See the agent deployment's `terraform/memory.tf` for the namespace templates.
 
 `retrieval_namespaces` is a tuple of `(namespace_template, top_k, relevance_score)` entries.
@@ -20,13 +20,13 @@ floor to tune from the memory traces.
 
 from __future__ import annotations
 
-from agent_kit.config import get_config
-from agent_kit.infra import identity
-
 
 def build_session_manager(
+    memory_id: str,
     session_id: str | None,
+    actor_id: str,
     retrieval_namespaces: tuple[tuple[str, int, float], ...],
+    region: str = "us-west-2",
 ):
     if session_id is None:
         return None
@@ -39,16 +39,15 @@ def build_session_manager(
         AgentCoreMemorySessionManager,
     )
 
-    cfg = get_config()
     return AgentCoreMemorySessionManager(
         agentcore_memory_config=AgentCoreMemoryConfig(
-            memory_id=cfg.memory_id,
+            memory_id=memory_id,
             session_id=session_id,
-            actor_id=identity.actor_id(),
+            actor_id=actor_id,
             retrieval_config={
                 ns: RetrievalConfig(top_k=top_k, relevance_score=score)
                 for (ns, top_k, score) in retrieval_namespaces
             },
         ),
-        region_name=cfg.aws_region,
+        region_name=region,
     )

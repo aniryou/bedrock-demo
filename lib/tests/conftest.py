@@ -1,13 +1,5 @@
-"""Shared test fixtures."""
+"""Shared test fixtures.
 
-import pytest
-
-import agent_kit.config as config
-
-
-@pytest.fixture(autouse=True)
-def _clear_config_cache():
-    """Each test gets a fresh, env-driven Config (it is lru_cached)."""
-    config.get_config.cache_clear()
-    yield
-    config.get_config.cache_clear()
+The toolkit is config-free — there is no module-level Config cache to reset — so this
+file intentionally holds no fixtures. It exists to mark `tests/` as the pytest rootdir.
+"""

@@ -71,6 +71,21 @@ def _str_claim(claims: dict, *names: str) -> str | None:
     return None
 
 
+def extract_user_jwt(context, header_name: str = "Authorization") -> str | None:
+    """Pull the inbound user bearer from the request headers (CUSTOM_JWT inbound)."""
+    headers = getattr(context, "request_headers", None) if context else None
+    if not headers:
+        return None
+    want = header_name.lower()
+    for k, v in headers.items():
+        if k.lower() == want and isinstance(v, str):
+            v = v.strip()
+            if v.lower().startswith("bearer "):
+                v = v[7:].strip()
+            return v or None
+    return None
+
+
 def set_user_jwt(jwt: str | None):
     """Set the per-request user identity from an inbound bearer JWT.
 

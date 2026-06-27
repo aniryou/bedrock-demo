@@ -1,13 +1,15 @@
 # agent_kit
 
-The **agent-agnostic Strands + AgentCore runtime toolkit**. `agent_kit` holds the plumbing
-every agent on **Amazon Bedrock AgentCore Runtime** shares — system-prompt and tool-surface
-assembly, the `BedrockModel`, AgentCore Memory, per-request user identity, the Gateway MCP
-client, the skill/ontology/KB loaders, the action-coverage gate, and the stream-step
-classifier. A consuming agent stays **thin**: it constructs one `AgentSpec` — its id, metric
-namespace, action implementations, KB tool name/description, and model/region/token defaults —
-and calls `build_app(SPEC)` to stand up a deployable runtime. The toolkit itself imports no
-per-agent package, so the same code backs every agent. It is installed into the agent image
+The **agent-agnostic Strands + AgentCore helper toolkit**. `agent_kit` is a flat set of
+composable helpers every agent on **Amazon Bedrock AgentCore Runtime** can reuse —
+system-prompt and `requestMetadata` builders, per-request user identity, the Gateway MCP
+client, the AgentCore Memory session manager, the per-turn token-usage EMF emitter, the
+skill/ontology/KB loaders, the action-coverage gate, and the stream-step classifier. The
+library has **zero control flow and makes zero configuration decisions**: the **consuming
+agent owns assembly** — it writes its own `build_agent()` (constructing the `BedrockModel`
+with its own guardrail/model config) and its `@app.entrypoint` runtime loop, calling these
+`kit.*` helpers. There is **no `build_app` / `AgentSpec` / `Config`** here. The toolkit imports
+no per-agent package, so the same code backs every agent. It is installed into the agent image
 ([`../agent/Dockerfile`](../agent/Dockerfile) builds `./lib[deploy]`, then the agent on top).
 
 ## How it fits
@@ -15,54 +17,60 @@ per-agent package, so the same code backs every agent. It is installed into the 
 The [bedrock-demo](../README.md) mono-repo has **six top-level folders** — the five pipeline
 components (knowledge, agent, stubs, infra, app) plus this **shared lib (`agent_kit`)** the
 agent builds on; see [The components](../README.md#the-components) for the full map. `agent_kit`
-is **not a pipeline stage**: it is the agent-agnostic runtime toolkit consumed by the
+is **not a pipeline stage**: it is the agent-agnostic helper toolkit consumed by the
 [agent](../agent/README.md) (and any future agent), installed into the agent container image.
-The agent supplies an `AgentSpec` and calls `build_app(SPEC)`; all the runtime and knowledge
-plumbing lives here.
+The agent owns its assembly — it writes `build_agent()` and the entrypoint loop and calls the
+`kit.*` helpers; the library provides the reusable building blocks.
 
 ## Public API
 
-Everything a consumer needs is re-exported from the package root (`import agent_kit`):
+The package root (`import agent_kit`, conventionally aliased `kit`) re-exports a **flat set of
+helpers** — no control objects, no factory:
 
-- **`AgentSpec`** (`spec.py`) — the frozen per-agent contract, and the only surface a consuming
-  agent constructs: `agent_id`, `metric_namespace`, `action_implementations` (each ontology
-  action a skill can invoke → the Gateway tool that serves it), `kb_tool_name` /
-  `kb_tool_description`, an optional `system_prompt_preamble`, the memory `retrieval_namespaces`,
-  and `model_id` / `region` / `max_tokens` defaults.
-- **`build_agent(spec, session_id=None, actor_id=None, actor_oid="", extra_tools=None)`**
-  (`agent.py`) — assembles the system prompt, tool surface, `BedrockModel`, and AgentCore
-  Memory session manager into a Strands `Agent`. The Gateway's MCP tools arrive as
-  `extra_tools`.
-- **`build_app(spec)`** (`app.py`) — the AgentCore Runtime entrypoint factory: seeds config
-  from the spec, lazy-imports `BedrockAgentCoreApp`, registers the streaming `/invocations`
-  invoke loop (forwards the inbound user JWT to the Gateway, emits the per-turn token-usage EMF
-  metric), and returns the app.
-- Also exported: **`make_kb_tool`** (build the KB-search `@tool` by name/description),
-  **`describe_entity`** (ontology reverse-index lookup tool), **`load_skill`** (fetch a skill's
-  playbook body), **`step_events`** (the stream-step classifier), **`get_config`** / **`Config`**
-  (env-driven runtime config).
+- **`identity`** (the `agent_kit.infra.identity` module) — per-request user identity:
+  `set_user_jwt` / `reset` / `current`, `actor_id(default="anonymous")`, `actor_oid()`,
+  `ANONYMOUS_ACTOR`, and `extract_user_jwt(context, header_name="Authorization")` to pull the
+  bearer off the AgentCore request context.
+- **`build_gateway_client(gateway_url, jwt)`** — build the Gateway MCP client with the user
+  JWT as the `Authorization: Bearer` token (lazy-imports `mcp` + `strands.tools.mcp`).
+- **`build_session_manager(memory_id, session_id, actor_id, retrieval_namespaces, region="us-west-2")`**
+  — the AgentCore Memory session manager (returns `None` when `session_id is None`;
+  lazy-imports `bedrock_agentcore`).
+- **`emit_usage_metric(agent, *, namespace, agent_id, model_id="", session_id=None, actor_id="", actor_oid="")`**
+  — print the per-turn token-usage EMF document to stdout (never raises).
+- **`make_kb_tool(name, description, knowledge_base_id, region="us-west-2")`** — build the
+  KB-search `@tool` by name/description over an explicit Knowledge Base id.
+- **`describe_entity`** — the ontology reverse-index lookup tool; **`OntologyLoader`** /
+  **`ontology_loader`** back it.
+- **`load_skill`** — fetch a skill's playbook body; **`SkillLoader`** / **`skill_loader`** read
+  the catalog and required actions.
+- **`tools_with_coverage(local_tools, action_implementations, extra_tools=None)`** /
+  **`assert_action_coverage(tools, action_implementations)`** / **`SkillActionCoverageError`** —
+  the action-coverage gate: assert every skill-invoked action maps to a registered tool.
+- **`build_system_prompt(preamble="", loader=None)`** / **`request_metadata(agent_id, session_id=None, actor_id="", actor_oid="")`**
+  — assemble the system prompt (skill doctrine + on-demand catalog) and the opaque,
+  PII-scrubbed `requestMetadata` dict for a Converse call.
+- **`step_events`** / **`tool_result_text`** — the pure stream-step classifier.
 
 ## Repository structure
 
 ```text
 lib/
 ├── src/agent_kit/
-│   ├── __init__.py          # the public API re-exports (AgentSpec, build_agent, build_app, …)
-│   ├── spec.py              # AgentSpec — the frozen per-agent contract
-│   ├── config.py            # env-driven Config.from_env() (lru_cached get_config) + configure()
-│   ├── agent.py             # build_agent() + system-prompt and requestMetadata assembly
-│   ├── app.py               # build_app() — the AgentCore Runtime entrypoint factory
+│   ├── __init__.py          # the flat helper re-exports (no AgentSpec / build_app / build_agent)
+│   ├── prompt.py            # build_system_prompt() + request_metadata() builders
 │   ├── stream_steps.py      # pure classifier: Strands events -> typed timeline step events
 │   ├── infra/               # AWS-facing plumbing
-│   │   ├── gateway.py       # Gateway MCP client (user JWT as bearer)
-│   │   ├── identity.py      # per-request user identity (ContextVar; OBO subject)
-│   │   └── memory.py        # AgentCore Memory session manager
+│   │   ├── gateway.py       # build_gateway_client(gateway_url, jwt) — Gateway MCP client
+│   │   ├── identity.py      # per-request user identity (ContextVar) + extract_user_jwt
+│   │   ├── memory.py        # build_session_manager(...) — AgentCore Memory session manager
+│   │   └── metrics.py       # emit_usage_metric(...) — the per-turn token-usage EMF emitter
 │   └── knowledge/           # fetched-content loaders + local tools + the coverage gate
-│       ├── skill_loader.py  # SkillLoader: skills_catalog() + get_skill() over SKILLS_DIR
+│       ├── skill_loader.py  # SkillLoader: skills_catalog() + required_actions() over SKILLS_DIR
 │       ├── ontology.py      # OntologyLoader + describe_entity (reverse-index lookup tool)
 │       ├── skills.py        # load_skill tool (returns a skill's procedure body)
-│       ├── kb.py            # KB retrieve + make_kb_tool factory (Bedrock Knowledge Base)
-│       └── coverage.py      # tool registry (get_tools) + the action-coverage startup gate
+│       ├── kb.py            # _kb_retrieve + make_kb_tool factory (Bedrock Knowledge Base)
+│       └── coverage.py      # tools_with_coverage + assert_action_coverage (the coverage gate)
 ├── tests/                   # hermetic unit tests (loaders, identity, stream classifier, metadata)
 ├── pyproject.toml           # distribution agent-kit; core deps + deploy/dev extras
 ├── Makefile                 # setup · test · lint · clean (uv)
@@ -76,66 +84,93 @@ The two sub-packages split along a clean line:
 
 - **`infra/`** is the **AWS-facing plumbing** — the Gateway MCP client, the per-request user
   identity `ContextVar` (the OBO subject, used only as a memory partition key, never to
-  authorize), and the AgentCore Memory session manager.
+  authorize), the AgentCore Memory session manager, and the per-turn token-usage EMF emitter.
 - **`knowledge/`** is the **fetched-content layer** — it reads the skills + ontology bindings
   copied into `SKILLS_DIR` / `ONTOLOGY_DIR` and exposes the **local tools** (KB search,
   `describe_entity`, `load_skill`) plus the **action-coverage gate** that asserts every
   skill-invoked action maps to a registered tool.
 
 The **backends and the fetched knowledge are not in this package.** The Gateway-served backend
-tools are passed into `build_agent` as `extra_tools` at runtime (discovered per MCP session,
-never hard-coded); the local tools are always present. The skill/ontology/KB *content* is
-fetched into the agent image from the [knowledge](../knowledge/README.md) folder — `agent_kit`
-ships the loaders, not the data.
+tools are passed to `tools_with_coverage(...)` as `extra_tools` by the agent at runtime
+(discovered per MCP session, never hard-coded); the local tools are always present. The
+skill/ontology/KB *content* is fetched into the agent image from the
+[knowledge](../knowledge/README.md) folder — `agent_kit` ships the loaders, not the data.
 
 ## The import boundary
 
 `import agent_kit` succeeds with **only the core deps** — `strands` (which pulls in `mcp`),
 `boto3`, `pyyaml`. The deploy-only imports are **lazy**: `bedrock_agentcore` is imported inside
-`build_app`, and the `mcp` client is built inside the Gateway client — never at module top
-level. That keeps the **hermetic tests** runnable without the `deploy` extra and without any
-network, model, or AWS access.
+`build_session_manager`, and the `mcp` client is built inside `build_gateway_client` — never at
+module top level. That keeps the **hermetic tests** runnable without the `deploy` extra and
+without any network, model, or AWS access.
 
 ## Minimal consumer
 
-A new agent is a spec plus one line. The whole per-agent surface:
+The agent owns assembly — it writes its own `build_agent()` (model + guardrails + tools +
+prompt) and the `@app.entrypoint` loop, calling `kit.*` helpers. A sketch:
 
 ```python
-from agent_kit import AgentSpec, build_app
+import os
+import agent_kit as kit
+from agent_kit import identity
+from strands import Agent
+from strands.models import BedrockModel
 
-SPEC = AgentSpec(
-    agent_id="order-triage",
-    metric_namespace="OrderTriage/Agent",
-    # each ontology action a skill can invoke -> the Gateway tool that serves it
-    action_implementations={"raiseException": "orders___flagOrder"},
-    kb_tool_name="search_policies",
-    kb_tool_description="Search the order/credit/dispute policy knowledge base for relevant rules.",
-)
+def build_agent(session_id, actor_id, actor_oid, extra_tools):
+    # the AGENT owns the model + guardrail config
+    model = BedrockModel(
+        model_id=os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-opus-4-8"),
+        region_name="us-west-2",
+        additional_args={"requestMetadata": kit.request_metadata(
+            "order-triage", session_id, actor_id, actor_oid)},
+        # guardrail_id / guardrail_version threaded in here when both are set
+    )
+    tools = kit.tools_with_coverage(
+        [kit.make_kb_tool("search_policies", "…", os.getenv("KNOWLEDGE_BASE_ID", ""), "us-west-2"),
+         kit.describe_entity, kit.load_skill],
+        {"raiseException": "orders___flagOrder"},   # action -> Gateway tool
+        extra_tools,                                  # the Gateway's MCP tools
+    )
+    return Agent(model=model, system_prompt=kit.build_system_prompt(), tools=tools,
+                 agent_id="order-triage",
+                 session_manager=kit.build_session_manager(
+                     os.getenv("AGENTCORE_MEMORY_ID", ""), session_id, actor_id,
+                     RETRIEVAL_NAMESPACES, "us-west-2"))
 
-app = build_app(SPEC)   # the AgentCore Runtime entrypoint (/invocations + /ping)
+# the AGENT owns the entrypoint loop (BedrockAgentCoreApp), opening the Gateway MCP
+# session, forwarding the user JWT via identity.set_user_jwt(kit.extract_user_jwt(context)),
+# streaming with kit.step_events(...), and calling kit.emit_usage_metric(...) at the end.
 ```
 
-`agent_kit` does the rest: builds one Strands agent per turn, forwards the inbound user JWT as
-the Gateway bearer, injects the Gateway's MCP tools as `extra_tools`, and streams the answer
-back as NDJSON plus typed `__step__` timeline events.
+The helpers do the reusable work; the **agent** decides the model, guardrails, namespaces, and
+control flow. The local tools (KB search, `describe_entity`, `load_skill`) are always present;
+the Gateway's MCP tools arrive as `extra_tools`, and `tools_with_coverage` asserts every
+skill-invoked action resolves to a registered tool before the agent serves a request.
 
 ## How a runtime is assembled
 
+The **agent** owns assembly and control flow; the library is the box of helpers it calls.
+
 ```mermaid
 flowchart TB
-    spec["AgentSpec<br/>agent_id · metric_namespace · action_implementations<br/>kb tool name/description · model/region/tokens"]
-
-    subgraph kit["agent_kit"]
+    subgraph agent["agent/ · src/order_triage (owns assembly + config)"]
         direction TB
-        buildapp["build_app(spec)<br/>seeds Config · registers invoke loop"]
-        app["BedrockAgentCoreApp<br/>/invocations + /ping"]
-        buildagent["build_agent(spec, ...)<br/>model + prompt + tools + memory"]
+        ba["agent.py · build_agent()<br/>BedrockModel + guardrails + tools + prompt + memory"]
+        rt["runtime.py · @app.entrypoint loop<br/>BedrockAgentCoreApp · JWT → Gateway · stream · EMF"]
+        rt --> ba
+    end
+
+    subgraph kit["agent_kit (pure helpers — no control flow)"]
+        direction TB
+        prompt["prompt.py<br/>build_system_prompt · request_metadata"]
+        steps["stream_steps.py · step_events"]
 
         subgraph infra["infra/ (AWS plumbing)"]
             direction TB
-            gw["gateway.py<br/>MCP client"]
-            ident["identity.py<br/>per-request user (ContextVar)"]
-            mem["memory.py<br/>AgentCore Memory session"]
+            gw["gateway.py · build_gateway_client"]
+            ident["identity.py · identity + extract_user_jwt"]
+            mem["memory.py · build_session_manager"]
+            met["metrics.py · emit_usage_metric"]
         end
 
         subgraph know["knowledge/ (loaders + local tools + gate)"]
@@ -144,24 +179,25 @@ flowchart TB
             ont["ontology.py · describe_entity"]
             sk["skills.py · load_skill"]
             kb["kb.py · make_kb_tool"]
-            cov["coverage.py · action-coverage gate"]
+            cov["coverage.py · tools_with_coverage"]
         end
     end
 
-    gwtools["Gateway MCP tools<br/>(extra_tools, injected at runtime)"]
+    gwtools["Gateway MCP tools<br/>(extra_tools, discovered per turn)"]
     runtime(["Strands Agent on AgentCore Runtime"])
 
-    spec --> buildapp --> app
-    buildapp --> buildagent
-    infra --> buildagent
-    know --> buildagent
-    gwtools -->|extra_tools| buildagent
+    rt -->|calls| infra
+    rt -->|calls| steps
+    ba -->|calls| prompt
+    ba -->|calls| infra
+    ba -->|calls| know
+    gwtools -->|extra_tools| ba
     cov -.->|asserts coverage| gwtools
-    buildagent --> runtime
+    ba --> runtime
 ```
 
-The local tools (KB search, `describe_entity`, `load_skill`) are always present; the Gateway's
-MCP tools are injected per turn as `extra_tools`, and the coverage gate asserts every
+The agent calls `kit.*` to build the model, prompt, tools, memory, and metrics; the Gateway's
+MCP tools are passed in per turn as `extra_tools`, and `tools_with_coverage` asserts every
 skill-invoked action resolves to one of the registered tools before the agent serves a request.
 
 ## Setup & usage

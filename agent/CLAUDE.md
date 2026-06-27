@@ -1,10 +1,11 @@
 # CLAUDE.md
 
-Working brief for the **order-triage agent** — a thin consumer of the shared **`agent_kit`**
-toolkit (`../lib`): it supplies an `AgentSpec` and wires the AgentCore Runtime entrypoint, while
-the Strands agent, local tools, and runtime plumbing live in the lib. See `README.md` for full
-architecture diagrams and the six-folder mono-repo layout; this file is the orientation an agent
-needs to work in the code.
+Working brief for the **order-triage agent** — it OWNS its assembly and composes the shared
+**`agent_kit`** toolkit (`../lib`): it constructs its own `BedrockModel` (with its guardrail/
+model config), wires the AgentCore Runtime entrypoint, and calls lib helpers for the
+agent-agnostic plumbing (prompt, identity, Gateway, memory, metrics, knowledge loaders). See
+`README.md` for full architecture diagrams and the six-folder mono-repo layout; this file is
+the orientation an agent needs to work in the code.
 
 ## Commands
 
@@ -23,20 +24,23 @@ make lint      # ruff                       (uv run ruff check .)
 
 ## Layout
 
-This agent is a **thin consumer of `agent_kit`** (the in-tree library at `../lib`). All the
-agent-agnostic plumbing — prompt assembly, tool surface, `BedrockModel`, memory, identity,
-Gateway client, skill/ontology/KB loaders, stream classifier, the AgentCore runtime
-entrypoint — lives in `agent_kit`. This package supplies only the per-agent contract.
+This agent **composes `agent_kit`** (the in-tree library at `../lib`) and **owns all
+configuration**. `agent_kit` is a pure toolkit of helpers — prompt assembly, identity,
+Gateway client, memory, metrics, skill/ontology/KB loaders, stream classifier — with zero
+control flow and zero config decisions. The agent itself constructs its `BedrockModel`
+(model id, guardrail, token budget) and drives the AgentCore runtime loop.
 
 - `src/order_triage/`
-  - `spec.py` — `SPEC`: the agent's `AgentSpec` (`agent_id`, metric namespace,
-    `action_implementations`, KB tool name/description). The single per-agent surface
-    `agent_kit` is driven from.
-  - `runtime.py` — `app = build_app(SPEC)`. AgentCore entrypoint
-    (`BedrockAgentCoreApp`, `/invocations` + `/ping`) built entirely by `agent_kit`. Needs the
-    `deploy` extra; not imported by the tests.
+  - `agent.py` — the agent's configuration (model id, region, guardrail, `ACTIONS` Gateway
+    map, KB tool name/description, retrieval namespaces) and `build_agent`, which builds the
+    `BedrockModel` (owning the guardrails) and the Strands `Agent` from lib helpers. Imports
+    `strands` + `agent_kit` only (no `bedrock_agentcore`), so it is import-safe in the tests.
+  - `runtime.py` — the AgentCore entrypoint loop. The `@app.entrypoint` invoke handler on a
+    `BedrockAgentCoreApp` (`/invocations` + `/ping`): forwards the user JWT, opens the Gateway
+    client, calls `build_agent`, streams, and emits the usage metric. Imports
+    `bedrock_agentcore` (the `deploy` extra); not imported by the tests.
   - `__init__.py` — package `__version__`.
-- `tests/` — per-agent hermetic tests (`test_spec.py`: skill→action coverage of `SPEC`).
+- `tests/` — per-agent hermetic tests (`test_spec.py`: skill→action coverage of `ACTIONS`).
   The plumbing's own unit tests live in `../lib/tests`.
 - `skills/`, `ontology/`, `kb/` — fetched content, gitignored (see below).
 - `scripts/fetch_skills.sh`, `Dockerfile`, `Makefile`, `../.github/workflows/` (agent-ci.yml, agent-build.yml).
@@ -76,7 +80,7 @@ then the agent).
   CUSTOM_JWT authorizer already verified it upstream, and the subject is used only as a memory
   partition key, never to authorize. Never log token bytes or claim values.
 - **`requestMetadata` values must stay opaque, charset-limited, and PII-free**
-  (`agent_kit.agent` strips them); never put an email/UPN/raw subject into a Converse call.
+  (`agent_kit.prompt` strips them); never put an email/UPN/raw subject into a Converse call.
 - **Ontology names ≠ Snowflake fields.** The ontology (`SalesOrder.soNumber`, …) is a
   routing/governance map; the backend tools return runtime fields
   (`order_id` / `amount` / `status`). Ontology names are for routing, never tool arguments.

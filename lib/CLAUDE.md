@@ -1,9 +1,11 @@
 # CLAUDE.md
 
-Working brief for **agent_kit** — the agent-agnostic Strands + AgentCore runtime toolkit
-(src layout: `src/agent_kit/`). It holds the plumbing every agent shares; a per-agent
-package supplies an `AgentSpec` and consumes `build_agent` / `build_app` to stand up a
-deployable runtime. See `README.md` for the one-paragraph overview.
+Working brief for **agent_kit** — the agent-agnostic Strands + AgentCore **helper toolkit**
+(src layout: `src/agent_kit/`). It is a flat set of composable helpers every agent reuses.
+The library has **zero control flow and makes zero configuration decisions**: the consuming
+agent owns assembly (it writes `build_agent()` and the `@app.entrypoint` loop, constructing
+its own `BedrockModel` with its guardrail/model config) and calls these `kit.*` helpers. There
+is **no `build_app` / `AgentSpec` / `Config`**. See `README.md` for the one-paragraph overview.
 
 ## Commands
 
@@ -18,46 +20,53 @@ make lint      # ruff                       (uv run ruff check .)
 
 ## Public API
 
-- **`AgentSpec`** (`spec.py`) — the frozen per-agent contract: `agent_id`,
-  `metric_namespace`, `action_implementations`, the KB tool name/description, an optional
-  `system_prompt_preamble`, the memory `retrieval_namespaces`, and model/region/max-tokens
-  defaults. A consuming agent constructs one of these and passes nothing else.
-- **`build_agent(spec, ...)`** (`agent.py`) — assembles the system prompt, tool surface,
-  `BedrockModel`, and AgentCore Memory into a Strands `Agent`.
-- **`build_app(spec)`** (`app.py`) — the AgentCore Runtime entrypoint factory: seeds config
-  from the spec, lazy-imports `BedrockAgentCoreApp`, registers the `/invocations` invoke
-  loop, and returns the app. The deploy-only import is lazy, so `import agent_kit` needs
-  only the core deps.
-- Also exported: `make_kb_tool`, `describe_entity`, `load_skill`, `step_events`,
-  `get_config`, `Config`.
+A flat set of helpers re-exported from the package root (`import agent_kit as kit`):
+
+- **`identity`** (the `infra/identity.py` module) — per-request user identity
+  (`set_user_jwt` / `reset` / `current`, `actor_id` / `actor_oid`, `ANONYMOUS_ACTOR`) +
+  **`extract_user_jwt(context, header_name="Authorization")`**.
+- **`build_gateway_client(gateway_url, jwt)`** — the Gateway MCP client (user JWT bearer).
+- **`build_session_manager(memory_id, session_id, actor_id, retrieval_namespaces, region="us-west-2")`**
+  — AgentCore Memory session manager (`None` when `session_id is None`).
+- **`emit_usage_metric(agent, *, namespace, agent_id, model_id="", session_id=None, actor_id="", actor_oid="")`**
+  — the per-turn token-usage EMF emitter (never raises).
+- **`make_kb_tool(name, description, knowledge_base_id, region="us-west-2")`** — the KB-search
+  `@tool` factory; **`describe_entity`** / **`OntologyLoader`** / **`ontology_loader`**;
+  **`load_skill`** / **`SkillLoader`** / **`skill_loader`**.
+- **`tools_with_coverage(local_tools, action_implementations, extra_tools=None)`** /
+  **`assert_action_coverage`** / **`SkillActionCoverageError`** — the coverage gate.
+- **`build_system_prompt(preamble="", loader=None)`** / **`request_metadata(agent_id, ...)`**;
+  **`step_events`** / **`tool_result_text`**.
 
 ## Layout
 
 - `src/agent_kit/`
-  - `spec.py` — the `AgentSpec` contract object.
-  - `config.py` — env-driven `Config.from_env()` (`lru_cache`d via `get_config()`); per-agent
-    overrides via `configure(model_id=, region=, max_tokens=)`.
-  - `agent.py` — `build_agent()` + system-prompt and `requestMetadata` assembly.
-  - `app.py` — `build_app()` runtime entrypoint factory.
+  - `prompt.py` — `build_system_prompt()` + `request_metadata()` (the `requestMetadata`
+    sanitizer `_rm_value` / `_RM_DISALLOWED`).
   - `stream_steps.py` — pure classifier turning Strands events into typed timeline events.
-  - `infra/` — `gateway.py` (Gateway MCP client), `identity.py` (per-request user identity
-    `ContextVar`), `memory.py` (AgentCore Memory session manager).
-  - `knowledge/` — `skill_loader.py`, `ontology.py`, `skills.py`, `kb.py` (KB search +
-    `make_kb_tool` factory), `coverage.py` (action-coverage gate + tool registry).
+  - `infra/` — `gateway.py` (`build_gateway_client`), `identity.py` (per-request user identity
+    `ContextVar` + `extract_user_jwt`), `memory.py` (`build_session_manager`), `metrics.py`
+    (`emit_usage_metric`).
+  - `knowledge/` — `skill_loader.py`, `ontology.py`, `skills.py`, `kb.py` (`_kb_retrieve` +
+    `make_kb_tool` factory), `coverage.py` (`tools_with_coverage` / `assert_action_coverage`).
 - `tests/` — hermetic unit tests (loaders, identity, stream classifier, request metadata).
 
 ## How it works (orientation)
 
-- **Agent-agnostic.** Nothing under `agent_kit` may import a per-agent package; the agent
-  identity, metric namespace, and action map all arrive via `AgentSpec`. The KB tool is built
-  by name from the spec (no hard-coded tool name).
+- **Pure toolkit — no control flow, no config decisions.** The library exposes helpers; the
+  **agent owns assembly**. The agent writes `build_agent()` and the `@app.entrypoint` loop,
+  constructs its own `BedrockModel` (model id, guardrails, token budget), and passes the
+  agent id / namespace / action map *into* the helpers as arguments. No env reads, no
+  `Config`, no factory here.
+- **Agent-agnostic.** Nothing under `agent_kit` may import a per-agent package. The KB tool is
+  built by name (`make_kb_tool(name, …)`), never a hard-coded tool name.
 - **`infra/` vs `knowledge/` split.** `infra/` is the AWS-facing plumbing (Gateway, identity,
-  Memory). `knowledge/` reads the fetched `skills/` + `ontology/` content and exposes the
-  local tools + the action-coverage gate that asserts every skill-invoked action maps to a
+  Memory, metrics). `knowledge/` reads the fetched `skills/` + `ontology/` content and exposes
+  the local tools + the action-coverage gate that asserts every skill-invoked action maps to a
   registered tool.
-- **Backends are not in this package.** The Gateway-served tools are passed into `build_agent`
-  as `extra_tools` at runtime; the local tools (KB search, `describe_entity`, `load_skill`)
-  are always present.
+- **Backends are not in this package.** The Gateway-served tools are passed to
+  `tools_with_coverage(...)` as `extra_tools` by the agent at runtime; the local tools (KB
+  search, `describe_entity`, `load_skill`) are always present.
 
 ## Conventions & gotchas
 
@@ -67,8 +76,8 @@ make lint      # ruff                       (uv run ruff check .)
 - **Comments and docstrings state the code's _current_ what / why / how** — never how it got
   there. No provenance, change history, or PR/phase references inline.
 - **`import agent_kit` must succeed with only the core deps** (strands, boto3, pyyaml).
-  `bedrock_agentcore` and `mcp` are lazy-imported inside `build_app` / the Gateway client —
-  never at module top level.
+  `bedrock_agentcore` is lazy-imported inside `build_session_manager` and `mcp` inside
+  `build_gateway_client` — never at module top level.
 - **Tests must stay hermetic** — no network, no model, no AWS.
 - **Keep this file lean.** Correct a stale line rather than appending a new one.
 

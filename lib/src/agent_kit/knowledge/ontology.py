@@ -13,13 +13,12 @@ artifacts are absent, so the agent still runs with zero ontology fetched.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 
 from strands import tool
-
-from agent_kit.config import get_config
 
 
 @dataclass(frozen=True)
@@ -37,7 +36,7 @@ class EntityView:
 
 class OntologyLoader:
     def __init__(self, ontology_dir: Path | None = None):
-        self._dir = ontology_dir or get_config().ontology_dir
+        self._dir = ontology_dir or Path(os.getenv("ONTOLOGY_DIR", "ontology"))
 
     @cached_property
     def _bindings(self) -> dict:
