@@ -1,5 +1,4 @@
-"""Skill loader — reads ontology-bound skill manifests fetched from the
-order-triage-knowledge repo.
+"""Skill loader — reads ontology-bound skill manifests fetched into the skills dir.
 
 Each skill is a `*.skill.md` file: YAML frontmatter (the ontology binding — `apiName`,
 `description`, `appliesTo`, …) followed by the markdown procedure body. The loader reads
@@ -18,7 +17,7 @@ from pathlib import Path
 
 import yaml
 
-from .config import get_config
+from agent_kit.config import get_config
 
 
 @dataclass(frozen=True)

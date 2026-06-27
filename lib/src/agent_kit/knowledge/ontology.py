@@ -1,9 +1,9 @@
 """Ontology lookup tool + loader (on-demand, pay-per-use).
 
 `describe_entity` answers "which skills / actions / KB govern this ontology entity?" from
-the release-pinned bindings.json (fetched from order-triage-knowledge into ONTOLOGY_DIR),
-plus its properties / datasource / related governed entities. It pulls context at call time
-exactly like `search_policies` pulls KB chunks — nothing ontology-related sits in the prompt.
+the release-pinned bindings.json (fetched into ONTOLOGY_DIR), plus its properties /
+datasource / related governed entities. It pulls context at call time exactly like the KB
+tool pulls KB chunks — nothing ontology-related sits in the prompt.
 
 The OntologyLoader (a read-only consumer of the design/governance layer) is co-located here
 since `describe_entity` is its only consumer. It degrades gracefully to empty when the
@@ -19,7 +19,7 @@ from pathlib import Path
 
 from strands import tool
 
-from ..config import get_config
+from agent_kit.config import get_config
 
 
 @dataclass(frozen=True)

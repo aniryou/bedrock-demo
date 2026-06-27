@@ -1,14 +1,14 @@
 """Skill tool — load a named skill's full playbook on demand.
 
-A local tool (the skill manifests are fetched from order-triage-knowledge into
-SKILLS_DIR); it never traverses the Gateway.
+A local tool (the skill manifests are fetched into SKILLS_DIR); it never traverses the
+Gateway.
 """
 
 from __future__ import annotations
 
 from strands import tool
 
-from ..skill_loader import skill_loader
+from agent_kit.knowledge.skill_loader import skill_loader
 
 
 @tool

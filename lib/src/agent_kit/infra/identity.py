@@ -24,12 +24,12 @@ import logging
 from contextvars import ContextVar
 from dataclasses import dataclass
 
-_LOG = logging.getLogger("order_triage.identity")
+_LOG = logging.getLogger("agent_kit.identity")
 
 # The shared, non-user-specific memory actor used when no verified user subject is
 # available (e.g. a token without `sub`/`oid`, or a malformed one) — a shared namespace
 # rather than failing the turn.
-ANONYMOUS_ACTOR = "order-triage"
+ANONYMOUS_ACTOR = "anonymous"
 
 
 @dataclass(frozen=True)

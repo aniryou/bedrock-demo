@@ -6,8 +6,8 @@ name: agent · Build & publish (image + KB)
 # rebuilds the image too.
 #
 # Triggers:
-#   push: main (agent/** or knowledge/** changed) - rebuild + publish, then cascade to the gated deploy
-#   workflow_dispatch                              - manual
+#   push: main (agent/**, lib/** or knowledge/** changed) - rebuild + publish, then cascade to the gated deploy
+#   workflow_dispatch                                       - manual
 #
 # Auth via GitHub OIDC. Requires (see infra/docs/playbooks/cd-setup.md):
 #   secrets: AWS_PUBLISH_ROLE_ARN, ECR_REPOSITORY_URL, ARTIFACTS_BUCKET,
@@ -19,6 +19,7 @@ on:
     branches: [main]
     paths:
       - "agent/**"
+      - "lib/**"
       - "knowledge/**"
       - ".github/workflows/agent-build.yml"
   workflow_dispatch:
@@ -68,14 +69,20 @@ jobs:
       - name: Fetch skills into the build context
         run: SKILLS_DIR=skills make skills
 
+      # Build from the repo root so the context spans both lib/ (the agent_kit
+      # toolkit the image installs) and agent/ (the order_triage consumer);
+      # the Dockerfile lives at agent/Dockerfile. Override the job's agent/
+      # working-directory to the repo root for this step.
       - name: Build + push ARM64 image to ECR
         id: image
+        working-directory: ${{ github.workspace }}
         run: |
           ECR="${{ secrets.ECR_REPOSITORY_URL }}"
           TAG="${GITHUB_SHA::12}"
           aws ecr get-login-password --region "$AWS_REGION" \
             | docker login --username AWS --password-stdin "${ECR%%/*}"
           docker buildx build --platform linux/arm64 \
+            -f agent/Dockerfile \
             -t "$ECR:$TAG" -t "$ECR:latest" --push .
           echo "image_uri=$ECR:$TAG" >> "$GITHUB_OUTPUT"
           echo "Pushed $ECR:$TAG (and :latest)"

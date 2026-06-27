@@ -2,17 +2,21 @@ name: agent · CI
 
 # Lint + hermetic unit tests. No AWS, no model — the agent's real backends (Bedrock
 # Gateway / KB / Memory) are exercised only on the deployed runtime. Path-filtered to
-# agent/. Skills are fetched from the in-tree knowledge/ folder (no token needed).
+# agent/ and lib/ (the agent depends on the agent_kit toolkit via a uv path source, so
+# a lib/ change must re-run the agent tests). Skills are fetched from the in-tree
+# knowledge/ folder (no token needed).
 
 on:
   push:
     branches: [main]
     paths:
       - "agent/**"
+      - "lib/**"
       - ".github/workflows/agent-ci.yml"
   pull_request:
     paths:
       - "agent/**"
+      - "lib/**"
       - ".github/workflows/agent-ci.yml"
 
 defaults:

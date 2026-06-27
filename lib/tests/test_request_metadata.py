@@ -1,6 +1,8 @@
 """requestMetadata: opaque attribution ids (incl. the Graph-resolvable actor_oid), PII-free."""
 
-from order_triage.agent import _request_metadata
+from __future__ import annotations
+
+from agent_kit.agent import _request_metadata
 
 
 def test_includes_actor_oid_alongside_the_sub():

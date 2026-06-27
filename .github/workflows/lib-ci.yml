@@ -1,0 +1,36 @@
+name: lib · CI
+
+# Lint + hermetic unit tests for the agent_kit toolkit (the agent-agnostic plumbing
+# the per-agent packages consume). No AWS, no model — agent_kit's real backends
+# (Bedrock Gateway / KB / Memory) are exercised only on a deployed agent. Path-filtered
+# to lib/. `import agent_kit` needs only the core deps (strands, boto3, pyyaml); the
+# deploy-only bedrock_agentcore import is lazy, so the tests stay hermetic.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "lib/**"
+      - ".github/workflows/lib-ci.yml"
+  pull_request:
+    paths:
+      - "lib/**"
+      - ".github/workflows/lib-ci.yml"
+
+defaults:
+  run:
+    working-directory: lib
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: false
+      - run: uv sync --extra dev
+      - name: Lint
+        run: uv run ruff check .
+      - name: Unit tests (hermetic)
+        run: uv run pytest tests -q

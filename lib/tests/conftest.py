@@ -1,7 +1,8 @@
 """Shared test fixtures."""
 
-import agent_kit.config as config
 import pytest
+
+import agent_kit.config as config
 
 
 @pytest.fixture(autouse=True)

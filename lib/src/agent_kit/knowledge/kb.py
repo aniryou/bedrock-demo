@@ -1,14 +1,15 @@
 """Knowledge Bases tool — Amazon Bedrock Knowledge Base retrieval.
 
-`search_policies` queries the Bedrock Knowledge Base via the `bedrock-agent-runtime`
-`retrieve` API. `KNOWLEDGE_BASE_ID` is required (no local fallback).
+`_kb_retrieve` queries the Bedrock Knowledge Base via the `bedrock-agent-runtime`
+`retrieve` API. `KNOWLEDGE_BASE_ID` is required (no local fallback). `make_kb_tool` wraps
+it in a strands `@tool` whose name and docstring are supplied per-agent.
 """
 
 from __future__ import annotations
 
 from strands import tool
 
-from ..config import get_config
+from agent_kit.config import get_config
 
 
 def _kb_retrieve(query: str, k: int = 3) -> str:
@@ -32,11 +33,17 @@ def _kb_retrieve(query: str, k: int = 3) -> str:
     return "\n\n".join(out)
 
 
-@tool
-def search_policies(query: str) -> str:
-    """Search the order/credit/dispute policy knowledge base for relevant rules.
+def make_kb_tool(name: str, description: str):
+    """Build a strands @tool with the given name and docstring that wraps _kb_retrieve.
 
-    Use this to ground decisions in policy (review thresholds, credit-hold rules,
-    dispute handling) and cite the policy you relied on.
+    strands derives the tool name from the function `__name__` and the description from
+    `__doc__`, so the wrapper's identity is set before decoration. The returned object
+    exposes `.tool_name == name`.
     """
-    return _kb_retrieve(query)
+
+    def _kb(query: str) -> str:
+        return _kb_retrieve(query)
+
+    _kb.__name__ = name
+    _kb.__doc__ = description
+    return tool(_kb)
