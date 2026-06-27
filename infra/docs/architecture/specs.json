@@ -29,7 +29,7 @@
    },
    {
     "key": "entra",
-    "x": 300,
+    "x": 210,
     "y": 116,
     "icon": "entra",
     "title": "Microsoft Entra ID",
@@ -142,7 +142,7 @@
      "snowl",
      "secrets"
     ],
-    "pad": 30
+    "pad": 32
    },
    {
     "label": "AWS Lambda · Function URLs",
@@ -152,7 +152,7 @@
      "orders",
      "snowl"
     ],
-    "pad": 20
+    "pad": 24
    }
   ],
   "edges": [
@@ -240,7 +240,7 @@
       92
      ],
      [
-      300,
+      210,
       92
      ]
     ]
@@ -304,7 +304,7 @@
   "subtitle": "One InvokeAgentRuntime turn inside the CUSTOM_JWT gate: Strands event loop drives Nova Lite (+Guardrail), LOCAL knowledge tools, the Cedar-guarded MCP Gateway, and per-user Memory",
   "desc": "Per-turn reasoning loop of the order-triage AgentCore agent: caller -> AgentCore Runtime (CUSTOM_JWT) -> Strands Agent event loop, which calls Bedrock Nova Lite (+Guardrail), LOCAL tools over the three knowledge surfaces (Knowledge Base -> S3 Vectors, ontology + skills corpus), the AgentCore Gateway (MCP, Cedar ENFORCE) to backend Lambdas, and reads/writes AgentCore Memory.",
   "size": {
-   "w": 1560,
+   "w": 1420,
    "h": 820
   },
   "nodes": [
@@ -452,7 +452,7 @@
      "memory",
      "ns"
     ],
-    "pad": 30
+    "pad": 32
    },
    {
     "label": "LOCAL tools — never via Gateway",
@@ -460,9 +460,10 @@
     "nodes": [
      "localtools",
      "kb",
-     "corpus"
+     "corpus",
+     "s3v"
     ],
-    "pad": 28
+    "pad": 24
    },
    {
     "label": "MCP tools to backends",
@@ -472,7 +473,7 @@
      "gateway",
      "backends"
     ],
-    "pad": 26
+    "pad": 24
    },
    {
     "label": "Memory (per actor_id)",
@@ -481,7 +482,7 @@
      "memory",
      "ns"
     ],
-    "pad": 20
+    "pad": 24
    }
   ],
   "edges": [
@@ -703,7 +704,7 @@
    {
     "key": "facts",
     "x": 1430,
-    "y": 145,
+    "y": 150,
     "icon": "db",
     "title": "SEMANTIC /facts",
     "sub": "{actorId} · k5 · >=0.3",
@@ -754,7 +755,7 @@
      "rt",
      "agent"
     ],
-    "pad": 28
+    "pad": 32
    },
    {
     "label": "AgentCore Memory",
@@ -769,7 +770,7 @@
      "retrieve",
      "inject"
     ],
-    "pad": 30
+    "pad": 32
    },
    {
     "label": "LONG-TERM strategies — per actorId",
@@ -779,7 +780,7 @@
      "prefs",
      "summ"
     ],
-    "pad": 18
+    "pad": 24
    }
   ],
   "edges": [
@@ -1026,7 +1027,7 @@
     "y": 575,
     "icon": "db",
     "title": "AgentCore Memory",
-    "sub": "session events",
+    "sub": "conversation state",
     "label": "below"
    },
    {
@@ -1122,7 +1123,7 @@
    {
     "key": "govdash",
     "x": 1300,
-    "y": 300,
+    "y": 340,
     "icon": "cloudwatch",
     "title": "Governance Dashboard",
     "sub": "evals · guardrails",
@@ -1131,7 +1132,7 @@
    {
     "key": "opsdash",
     "x": 1300,
-    "y": 620,
+    "y": 560,
     "icon": "cloudwatch",
     "title": "Operations Dashboard",
     "sub": "latency · cost · health",
@@ -1140,7 +1141,7 @@
    {
     "key": "alerts",
     "x": 1300,
-    "y": 885,
+    "y": 780,
     "icon": "sns",
     "title": "Alerts Topic",
     "sub": "SNS",
@@ -1149,7 +1150,7 @@
    {
     "key": "email",
     "x": 1570,
-    "y": 885,
+    "y": 780,
     "icon": "ses",
     "title": "Email Alert",
     "sub": "on confirmed sub",
@@ -1168,7 +1169,7 @@
      "gateway",
      "kb"
     ],
-    "pad": 28
+    "pad": 32
    },
    {
     "label": "Routing + Enrichment — log groups · X-Ray · evaluations",
@@ -1183,7 +1184,7 @@
      "anomaly",
      "spans"
     ],
-    "pad": 30
+    "pad": 32
    },
    {
     "label": "Destination — dashboards + alerts",
@@ -1194,7 +1195,7 @@
      "alerts",
      "email"
     ],
-    "pad": 28
+    "pad": 32
    }
   ],
   "edges": [
@@ -1499,7 +1500,7 @@
    {
     "key": "spans",
     "x": 930,
-    "y": 540,
+    "y": 480,
     "icon": "xray",
     "title": "gen_ai spans",
     "sub": "aws/spans · -DEFAULT content",
@@ -1526,7 +1527,7 @@
    {
     "key": "results",
     "x": 1180,
-    "y": 540,
+    "y": 480,
     "icon": "cwlogs",
     "title": "Results log group",
     "sub": "gen_ai.evaluation.result",
@@ -1535,7 +1536,7 @@
    {
     "key": "blocker",
     "x": 1410,
-    "y": 540,
+    "y": 480,
     "icon": "alarm",
     "title": "AgentSpanMapping",
     "sub": "0 scores · DEFERRED",
@@ -1544,7 +1545,7 @@
    {
     "key": "dash",
     "x": 1410,
-    "y": 700,
+    "y": 660,
     "icon": "cloudwatch",
     "title": "Operations dashboard",
     "sub": "eval panel · quality note",
@@ -1789,8 +1790,8 @@
   "subtitle": "The whole component map at a glance: Entra CUSTOM_JWT in -> Strands Runtime on Nova Lite -> Cedar-guarded MCP Gateway -> stub Lambdas + OBO into Snowflake, all emitting to CloudWatch",
   "desc": "Left-to-right AWS component map of the order-triage AgentCore system.",
   "size": {
-   "w": 1640,
-   "h": 820
+   "w": 1540,
+   "h": 790
   },
   "nodes": [
    {
@@ -1813,7 +1814,7 @@
    },
    {
     "key": "entra",
-    "x": 340,
+    "x": 210,
     "y": 150,
     "icon": "entra",
     "title": "Microsoft Entra ID",
@@ -1831,7 +1832,7 @@
    },
    {
     "key": "model",
-    "x": 430,
+    "x": 470,
     "y": 490,
     "icon": "bedrock",
     "title": "Bedrock Nova Lite",
@@ -1840,7 +1841,7 @@
    },
    {
     "key": "guard",
-    "x": 430,
+    "x": 470,
     "y": 640,
     "icon": "shield",
     "title": "Bedrock Guardrail",
@@ -1912,7 +1913,7 @@
    },
    {
     "key": "snowflake",
-    "x": 1320,
+    "x": 1240,
     "y": 438,
     "icon": "snowflake",
     "title": "Snowflake",
@@ -1946,7 +1947,7 @@
      "secrets",
      "cw"
     ],
-    "pad": 34
+    "pad": 32
    },
    {
     "label": "AWS Lambda · arm64 · Function URLs",
@@ -1956,7 +1957,7 @@
      "orders",
      "snowl"
     ],
-    "pad": 20
+    "pad": 24
    },
    {
     "label": "Observability · control plane",
@@ -1964,7 +1965,7 @@
     "nodes": [
      "cw"
     ],
-    "pad": 18
+    "pad": 24
    }
   ],
   "edges": [
@@ -2075,7 +2076,7 @@
       100
      ],
      [
-      340,
+      210,
       100
      ]
     ]
@@ -2177,7 +2178,7 @@
   "subtitle": "How the enterprise ontology (Objects + Actions), Skills and KB are structured and consumed: three LOCAL knowledge tools read the baked-in corpus; one Action binds to a Cedar-guarded Gateway MCP tool",
   "desc": "Structural knowledge plane of the order-triage AgentCore agent: the knowledge corpus (42-object ontology + actions, skills, KB policy docs, compiled to a bindings.json reverse index) is baked into the agent image and consumed through three LOCAL tools — describe_entity (ontology), load_skill (skills), search_policies (Bedrock Knowledge Base over S3 Vectors). Ontology Actions bind to AgentCore Gateway MCP tools via ACTION_IMPLEMENTATIONS (Cedar ENFORCE), egressing to backend Lambdas.",
   "size": {
-   "w": 1560,
+   "w": 1460,
    "h": 820
   },
   "nodes": [
@@ -2308,7 +2309,7 @@
      "kb",
      "s3v"
     ],
-    "pad": 34
+    "pad": 32
    },
    {
     "label": "LOCAL knowledge tools — in-process",
@@ -2318,7 +2319,7 @@
      "loadskill",
      "searchpol"
     ],
-    "pad": 26
+    "pad": 24
    },
    {
     "label": "Enterprise corpus · knowledge (baked into image)",
@@ -2329,7 +2330,7 @@
      "skills",
      "kbdocs"
     ],
-    "pad": 28
+    "pad": 24
    },
    {
     "label": "Execution surfaces",
@@ -2340,7 +2341,7 @@
      "kb",
      "s3v"
     ],
-    "pad": 26
+    "pad": 24
    }
   ],
   "edges": [
@@ -2511,8 +2512,8 @@
   "subtitle": "The full request/data flow of one InvokeAgentRuntime call: Entra CUSTOM_JWT in → Strands on Nova Lite → Cedar ENFORCE at the MCP Gateway → SigV4 (agent) vs Entra-OBO (user) egress → Snowflake EXTERNAL_OAUTH + RLS as the calling human",
   "desc": "Detailed sibling of the system overview: same whole-system scope but expands the identity / authorization / OBO / RLS chain. One InvokeAgentRuntime call from an Entra-authenticated caller, through the AgentCore Runtime (CUSTOM_JWT) and the Cedar-guarded MCP Gateway, out to the stub Lambdas (SigV4 for sap/orders, Entra-OBO Bearer for snowflake), and into Snowflake as the signed-in human (EXTERNAL_OAUTH + RLS). Grey edges are the observability control plane.",
   "size": {
-   "w": 1640,
-   "h": 820
+   "w": 1540,
+   "h": 790
   },
   "nodes": [
    {
@@ -2535,7 +2536,7 @@
    },
    {
     "key": "entra",
-    "x": 340,
+    "x": 210,
     "y": 150,
     "icon": "entra",
     "title": "Microsoft Entra ID",
@@ -2553,7 +2554,7 @@
    },
    {
     "key": "model",
-    "x": 430,
+    "x": 470,
     "y": 490,
     "icon": "bedrock",
     "title": "Bedrock Nova Lite",
@@ -2562,7 +2563,7 @@
    },
    {
     "key": "guard",
-    "x": 430,
+    "x": 470,
     "y": 640,
     "icon": "shield",
     "title": "Bedrock Guardrail",
@@ -2634,7 +2635,7 @@
    },
    {
     "key": "snowflake",
-    "x": 1320,
+    "x": 1240,
     "y": 438,
     "icon": "snowflake",
     "title": "Snowflake",
@@ -2678,7 +2679,7 @@
      "cw",
      "cedar"
     ],
-    "pad": 34
+    "pad": 32
    },
    {
     "label": "AWS Lambda · arm64 · Function URLs",
@@ -2688,7 +2689,7 @@
      "orders",
      "snowl"
     ],
-    "pad": 20
+    "pad": 24
    },
    {
     "label": "Observability · control plane",
@@ -2696,7 +2697,7 @@
     "nodes": [
      "cw"
     ],
-    "pad": 18
+    "pad": 24
    }
   ],
   "edges": [
@@ -2807,7 +2808,7 @@
       100
      ],
      [
-      340,
+      210,
       100
      ]
     ]
@@ -2850,7 +2851,11 @@
     "n": "7",
     "ss": "r",
     "ds": "l",
-    "via": null
+    "via": null,
+    "lp": [
+     1120,
+     438
+    ]
    },
    {
     "s": "snowl",
@@ -3051,7 +3056,7 @@
      "agentbuild",
      "stubsrel"
     ],
-    "pad": 30
+    "pad": 32
    },
    {
     "label": "Artifacts · AWS",
@@ -3060,7 +3065,7 @@
      "ecr",
      "s3art"
     ],
-    "pad": 26
+    "pad": 24
    },
    {
     "label": "Gated deploy · deploy.yml",
@@ -3070,7 +3075,7 @@
      "oidc",
      "tfapply"
     ],
-    "pad": 26
+    "pad": 24
    },
    {
     "label": "Live AgentCore · us-west-2",
@@ -3080,7 +3085,7 @@
      "lambdas",
      "cw"
     ],
-    "pad": 28
+    "pad": 32
    }
   ],
   "edges": [
