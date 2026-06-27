@@ -2,9 +2,9 @@
 
 The **delivery plane** — how a change reaches the live `order_triage` AgentCore stack. Unlike the
 runtime planes (which trace one `InvokeAgentRuntime` call), this traces one **merge to `main`**
-through the mono-repo's **path-filtered** GitHub Actions pipeline. It replaces the retired 5-repo
-`repository_dispatch` cascade: now there is **one repo** (`aniryou/bedrock-demo`) with component
-folders, and **path filters** route each change to the right workflow.
+through the mono-repo's **path-filtered** GitHub Actions pipeline. **One repo**
+(`aniryou/bedrock-demo`) holds the component folders, **path filters** route each change to the
+right workflow, and publishers self-dispatch the gated deploy via `repository_dispatch`.
 
 **Legend** — official AWS (+ GitHub / Terraform) icons, left → right. Edges: **solid dark** =
 build / publish / deploy path (numbered; `a/b` for a parallel fan-out) · **blue dashed** =
@@ -18,18 +18,21 @@ are pipeline-stage zones. The diagram is generated from [`specs.json`](specs.jso
 
 ### 1 · A change enters one repo
 **(1)** A developer pushes / merges to `main`. There is a single repo; the **folder** that changed
-(`agent/`, `knowledge/`, `stubs/`, `infra/`, `app/`) decides which workflows run — every workflow
+(`agent/`, `lib/`, `knowledge/`, `stubs/`, `infra/`, `app/`) decides which workflows run — every workflow
 declares `paths:` filters, so unrelated folders stay idle.
 
 ### 2 · Path-filtered fan-out
-**(2a)** `agent-build.yml` triggers on **`agent/**` _or_ `knowledge/**`** — because the agent
-**bakes knowledge in-tree**: its build runs `make skills`, which copies `skills/` + ontology
-`bindings.json` + `kb/` straight from the sibling `../knowledge` folder (no cross-repo fetch, no
-`SKILLS_TOKEN`), so the image always matches the knowledge committed in the same revision. **(2b)**
-`stubs-release.yml` triggers on `stubs/**`. The grey **Path-filtered CI** lane is the per-folder
-`*-ci` / validate workflows (`agent-ci`, `app-ci`, `infra-ci`, `stubs-ci`, `knowledge-validate`) —
-ruff · pytest · `terraform fmt+validate` · the ontology/bindings drift gate — run on every PR and
-push; it produces **no artifact**.
+**(2a)** `agent-build.yml` triggers on **`agent/**`, `lib/**` _or_ `knowledge/**`** — the agent
+**bakes both the shared lib and knowledge into the image**: the image installs `agent_kit` from
+`lib/` (so a `lib/**` change rebuilds it), and its build runs `make skills`, which copies `skills/` +
+ontology `bindings.json` + `kb/` straight from the sibling `../knowledge` folder (no cross-repo fetch,
+no `SKILLS_TOKEN`), so the image always matches the lib and knowledge committed in the same revision.
+**(2b)** `stubs-release.yml` triggers on `stubs/**`. The grey **Path-filtered CI** lane is the
+per-folder `*-ci` / validate workflows (`agent-ci`, `lib-ci`, `app-ci`, `infra-ci`, `stubs-ci`,
+`knowledge-validate`) — ruff · pytest · `terraform fmt+validate` · the ontology/bindings drift gate —
+run on every PR and push; it produces **no artifact**. `lib-ci` is hermetic (ruff + pytest, no AWS),
+and a `lib/**` change also re-runs `agent-ci` because the agent depends on `agent_kit` via a uv path
+source.
 
 ### 3 · Publish artifacts
 **(3a)** `agent-build` cross-builds a `linux/arm64` image and pushes it to **Amazon ECR** as
@@ -63,12 +66,12 @@ The same pipeline as a Mermaid flowchart — useful where an AWS-icon SVG is ove
 ```mermaid
 flowchart LR
     dev["Developer<br/>push · PR · merge to main"]
-    repo["aniryou/bedrock-demo<br/>agent · knowledge · stubs · infra · app"]
+    repo["aniryou/bedrock-demo<br/>agent · lib · knowledge · stubs · infra · app"]
 
     subgraph CI["Path-filtered GitHub Actions"]
         direction TB
         validate["Path-filtered CI<br/>*-ci · ruff · pytest · tf · ontology"]
-        agentbuild["agent-build.yml<br/>bakes in-tree knowledge · arm64"]
+        agentbuild["agent-build.yml<br/>bakes in-tree lib + knowledge · arm64"]
         stubsrel["stubs-release.yml<br/>Lambda zips + OpenAPI"]
     end
 
@@ -93,7 +96,7 @@ flowchart LR
     end
 
     dev -->|"merge to main"| repo
-    repo -->|"on agent/** or knowledge/**"| agentbuild
+    repo -->|"on agent/**, lib/** or knowledge/**"| agentbuild
     repo -->|"on stubs/**"| stubsrel
     repo -.->|"PR validate"| validate
 
@@ -114,17 +117,18 @@ flowchart LR
 ```
 
 ## Provenance
-- **Workflows** — `.github/workflows/`: `agent-build.yml` (image + KB publish, the `knowledge/**`
-  trigger + `make skills` in-tree bake), `stubs-release.yml` (zips + OpenAPI, the PAT dispatch),
-  `{agent,app,infra,stubs}-ci.yml` + `knowledge-validate.yml` (the validate lane), `deploy.yml`
-  (manual-approval gate → OIDC → `terraform apply`).
+- **Workflows** — `.github/workflows/`: `agent-build.yml` (image + KB publish, the `lib/**` +
+  `knowledge/**` triggers + `make skills` in-tree bake; builds `-f agent/Dockerfile` from the **repo
+  root** so the context spans both `lib/` and `agent/`), `stubs-release.yml` (zips + OpenAPI, the PAT
+  dispatch), `{agent,lib,app,infra,stubs}-ci.yml` + `knowledge-validate.yml` (the validate lane),
+  `deploy.yml` (manual-approval gate → OIDC → `terraform apply`).
 - **OIDC trust** — `infra/bootstrap/github_oidc.tf` (`repo:aniryou/bedrock-demo:environment:production`).
 - **In-tree knowledge** — `agent/scripts/fetch_skills.sh` (prefers the local `../knowledge` sibling).
 - **Runbook** — [`playbooks/cd-setup.md`](../playbooks/cd-setup.md).
 
 ## Caveats / scope
 - Delivery plane only; the per-turn runtime is the other planes (start at the
-  [system overview](system-overview.md)).
+  [end-to-end lifecycle](end-to-end.md)).
 - The producers still use `repository_dispatch`, now **intra-repo** — every dispatch step is guarded
   `if: env.DISPATCH_TOKEN != ''`, so the cascade no-ops safely until the PAT is provisioned;
   `deploy.yml` is also `workflow_dispatch` (manual) for an apply with no producer change.

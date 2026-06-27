@@ -1,8 +1,10 @@
 # CLAUDE.md
 
-Working brief for **order-triage-agent** — the Strands agent, its local tools, and the
-AgentCore Runtime entrypoint. See `README.md` for full architecture diagrams and the
-5-repo split; this file is the orientation an agent needs to work in the code.
+Working brief for the **order-triage agent** — a thin consumer of the shared **`agent_kit`**
+toolkit (`../lib`): it supplies an `AgentSpec` and wires the AgentCore Runtime entrypoint, while
+the Strands agent, local tools, and runtime plumbing live in the lib. See `README.md` for full
+architecture diagrams and the six-folder mono-repo layout; this file is the orientation an agent
+needs to work in the code.
 
 ## Commands
 

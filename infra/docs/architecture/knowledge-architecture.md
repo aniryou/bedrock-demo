@@ -13,7 +13,7 @@ validates the YAML layers and `build/bindings.py` compiles a **reverse index** (
 pinned release tag and **baked into the agent image**. The agent wires the corpus to runtime with
 **three LOCAL knowledge tools** — `describe_entity` (ontology reverse index), `load_skill` (skill
 playbook), `search_policies` (KB retrieve) — none of which traverse the Gateway. The one place
-knowledge crosses into the action plane is `ACTION_IMPLEMENTATIONS`: a skill that `invokes` the
+knowledge crosses into the action plane is the spec's `action_implementations`: a skill that `invokes` the
 ontology Action `raiseException` is mapped to the Gateway MCP tool `orders___flagOrder`, asserted at
 startup by a coverage gate (ADR-0001 — the ontology declares the *what*, the agent binds the *how*).
 
@@ -62,8 +62,8 @@ corpus build, so the cross-references are guaranteed resolvable.
 
 ### The one binding edge (blue dashed)
 `actions → AgentCore Gateway` is the **only** coupling between the enterprise corpus and the agent's
-concrete tools: `ACTION_IMPLEMENTATIONS = {"raiseException": "orders___flagOrder"}`, checked at
-startup by `_assert_action_coverage()`. The ontology never names a Gateway target; the agent owns
+concrete tools: `spec.action_implementations = {"raiseException": "orders___flagOrder"}`, checked at
+startup by `_assert_action_coverage()` (`agent_kit.knowledge.coverage`). The ontology never names a Gateway target; the agent owns
 that map. This is what keeps the corpus reusable across agents (and why agent-specific heuristics
 like `score_order` stay in the agent, never promoted up to the ontology).
 
@@ -120,9 +120,11 @@ flowchart LR
 - **Corpus** — `knowledge`: `ontology/{object-types,action-types,link-types}.yaml`,
   `skills/*.skill.md`, `kb/*.md` + `kb/index.yaml`; compiled by `build/{validate,bindings}.py` to
   `build/{ontology.compiled.json,bindings.json}`.
-- **Agent** — `agent`: `tools/{ontology.py,skills.py,knowledge.py}` (the 3 LOCAL
-  tools), `skill_loader.py` (catalog + bodies), `gateway_contract.py` (`GATEWAY_BINDINGS`,
-  `ACTION_IMPLEMENTATIONS`), `tools/__init__.py` (`_assert_action_coverage`).
+- **Agent toolkit** — the shared lib (`agent_kit`, consumed by `agent`):
+  `knowledge/{ontology.py,skills.py,kb.py}` (the 3 LOCAL tools — `kb.py` via the `make_kb_tool`
+  factory), `knowledge/skill_loader.py` (catalog + bodies), `knowledge/coverage.py`
+  (`get_tools`, `_assert_action_coverage`); the action map is `spec.action_implementations` on the
+  agent's `AgentSpec` (`agent/src/order_triage/spec.py`).
 - **Infra** — `bedrock-demo-infra`: `terraform/gateway.tf` (3 MCP targets), `policy.tf` (Cedar
   `permit_*`), `knowledge_base.tf` (Titan v2 + S3 Vectors), `*_lambda.tf` (sap / orders / snowflake).
 

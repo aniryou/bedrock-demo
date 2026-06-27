@@ -5,9 +5,9 @@ Entra-authenticated caller, through the AgentCore Runtime and the Cedar-guarded
 Gateway, out to the stub Lambdas, and into Snowflake **as the calling human** (OBO).
 The grey **Observability** band is the *control plane* (telemetry, not request flow);
 build/publish/deploy is documented in the [repo README](../../../README.md) and
-[`playbooks/cd-setup.md`](../playbooks/cd-setup.md) (a DevOps / CI-CD plane is pending). This is the
-detailed sibling of the [system overview](system-overview.md) — same whole-system scope,
-but it expands the identity / Cedar / OBO / RLS chain the overview folds.
+[`playbooks/cd-setup.md`](../playbooks/cd-setup.md), and drawn as the [DevOps / CI-CD plane](devops-architecture.md). This is the
+detailed sibling of the [end-to-end lifecycle](end-to-end.md) — the hero's request spine (`R1–R7`)
+at wire level, expanding the identity / Cedar / OBO / RLS chain the hero folds.
 
 **Legend** — official AWS (+ SaaS) icons, left → right. Edges: **solid dark** =
 request / data path (numbered `1…6`) · **blue dashed** = identity / token / OBO ·
@@ -159,7 +159,7 @@ model path — an async `PROMPT_ATTACK` input filter.
 
 > **Model id:** the diagram shows the *deployed* model, **Nova Lite**
 > (`amazon.nova-lite-v1:0` via `var.bedrock_model_id`). The agent's code default in
-> `config.py` is `anthropic.claude-opus-4-8`; the Terraform-injected env var overrides it
+> `agent_kit.config` is `anthropic.claude-opus-4-8`; the Terraform-injected env var overrides it
 > at deploy time.
 
 **3 — Authorization (Cedar).** Every Gateway tool call is checked by the **Cedar Policy
