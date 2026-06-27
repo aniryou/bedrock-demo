@@ -23,7 +23,7 @@
     "x": 210,
     "y": 320,
     "icon": "client",
-    "title": "Webapp",
+    "title": "Application",
     "sub": "Entra sign-in · JWT proxy",
     "label": "below"
    },
@@ -40,7 +40,7 @@
     "key": "runtime",
     "x": 450,
     "y": 320,
-    "icon": "bedrock",
+    "icon": "agent",
     "title": "AgentCore Runtime",
     "sub": "CUSTOM_JWT · actor_id = sub",
     "label": "below"
@@ -95,7 +95,7 @@
     "x": 950,
     "y": 318,
     "icon": "lambda",
-    "title": "Order-actions",
+    "title": "order-actions",
     "sub": "SigV4 · IAM",
     "label": "below"
    },
@@ -104,7 +104,7 @@
     "x": 950,
     "y": 414,
     "icon": "lambda",
-    "title": "Snowflake-query",
+    "title": "snowflake-query",
     "sub": "OBO Bearer | KEYPAIR_JWT",
     "label": "below"
    },
@@ -199,8 +199,8 @@
    {
     "s": "model",
     "d": "guard",
-    "kind": "req",
-    "label": "validate guardrails",
+    "kind": "id",
+    "label": "guardrailConfig · async",
     "n": "5",
     "ss": "b",
     "ds": "t",
@@ -321,7 +321,7 @@
     "key": "runtime",
     "x": 240,
     "y": 330,
-    "icon": "bedrock",
+    "icon": "agent",
     "title": "AgentCore Runtime",
     "sub": "CUSTOM_JWT gate · invoke()",
     "label": "below"
@@ -330,7 +330,7 @@
     "key": "agent",
     "x": 450,
     "y": 330,
-    "icon": "bedrock",
+    "icon": "agent",
     "title": "Strands Agent",
     "sub": "event loop · stream_async",
     "label": "below"
@@ -349,7 +349,7 @@
     "x": 300,
     "y": 160,
     "icon": "shield",
-    "title": "Guardrail",
+    "title": "Bedrock Guardrail",
     "sub": "PROMPT_ATTACK · async",
     "label": "below"
    },
@@ -357,7 +357,7 @@
     "key": "localtools",
     "x": 720,
     "y": 330,
-    "icon": "bedrock",
+    "icon": "tools",
     "title": "LOCAL tools",
     "sub": "search · describe · load_skill",
     "label": "below"
@@ -393,7 +393,7 @@
     "key": "mcptools",
     "x": 720,
     "y": 600,
-    "icon": "bedrock",
+    "icon": "tools",
     "title": "MCP tools",
     "sub": "sap/orders/snowflake + user JWT",
     "label": "below"
@@ -437,7 +437,7 @@
   ],
   "groups": [
    {
-    "label": "AWS Cloud · AgentCore Runtime (us-west-2)",
+    "label": "AWS Cloud · AgentCore · us-west-2",
     "dashed": false,
     "nodes": [
      "runtime",
@@ -519,7 +519,7 @@
     "s": "model",
     "d": "guard",
     "kind": "id",
-    "label": "guardrailConfig (async)",
+    "label": "guardrailConfig · async",
     "n": null,
     "ss": "l",
     "ds": "r",
@@ -659,7 +659,7 @@
     "key": "rt",
     "x": 540,
     "y": 330,
-    "icon": "bedrock",
+    "icon": "agent",
     "title": "AgentCore Runtime",
     "sub": "CUSTOM_JWT · session manager",
     "label": "below"
@@ -668,7 +668,7 @@
     "key": "agent",
     "x": 540,
     "y": 490,
-    "icon": "bedrock",
+    "icon": "agent",
     "title": "Strands Agent",
     "sub": "Nova Lite · ConverseStream",
     "label": "below"
@@ -748,7 +748,7 @@
   ],
   "groups": [
    {
-    "label": "AgentCore Runtime · us-west-2",
+    "label": "AWS Cloud · AgentCore · us-west-2",
     "dashed": false,
     "nodes": [
      "rt",
@@ -998,7 +998,7 @@
     "x": 95,
     "y": 215,
     "icon": "shield",
-    "title": "Guardrail",
+    "title": "Bedrock Guardrail",
     "sub": "PROMPT_ATTACK",
     "label": "below"
    },
@@ -1015,7 +1015,7 @@
     "key": "runtime",
     "x": 175,
     "y": 405,
-    "icon": "bedrock",
+    "icon": "agent",
     "title": "AgentCore Runtime",
     "sub": "EMF tokens · ADOT spans",
     "label": "below"
@@ -1201,8 +1201,8 @@
    {
     "s": "guard",
     "d": "model",
-    "kind": "sup",
-    "label": "on model path",
+    "kind": "id",
+    "label": "guardrailConfig · async",
     "n": null,
     "ss": "r",
     "ds": "l",
@@ -1437,7 +1437,7 @@
     "key": "agent",
     "x": 360,
     "y": 480,
-    "icon": "bedrock",
+    "icon": "agent",
     "title": "build_agent()",
     "sub": "real Strands agent",
     "label": "below"
@@ -1491,7 +1491,7 @@
     "key": "runtime",
     "x": 930,
     "y": 330,
-    "icon": "bedrock",
+    "icon": "agent",
     "title": "AgentCore Runtime",
     "sub": "order_triage · Strands loop",
     "label": "below"
@@ -1509,7 +1509,7 @@
     "key": "online",
     "x": 1180,
     "y": 330,
-    "icon": "bedrock",
+    "icon": "agent",
     "title": "Online Evaluations",
     "sub": "sample 100% · opt-in",
     "label": "below"
@@ -1527,7 +1527,7 @@
     "key": "results",
     "x": 1180,
     "y": 540,
-    "icon": "s3",
+    "icon": "cwlogs",
     "title": "Results log group",
     "sub": "gen_ai.evaluation.result",
     "label": "below"
@@ -1656,7 +1656,7 @@
     "d": "gate",
     "kind": "req",
     "label": "assert tool",
-    "n": "7",
+    "n": "7a",
     "ss": "r",
     "ds": "l",
     "via": null
@@ -1666,7 +1666,7 @@
     "d": "gate",
     "kind": "req",
     "label": "assert verdict",
-    "n": "7",
+    "n": "7b",
     "ss": "tr",
     "ds": "bl",
     "via": null
@@ -1824,7 +1824,7 @@
     "key": "runtime",
     "x": 470,
     "y": 330,
-    "icon": "bedrock",
+    "icon": "agent",
     "title": "AgentCore Runtime",
     "sub": "Strands · ontology · skills · tools",
     "label": "below"
@@ -1860,7 +1860,7 @@
     "key": "kb",
     "x": 640,
     "y": 640,
-    "icon": "s3",
+    "icon": "bedrock",
     "title": "Knowledge Base",
     "sub": "Titan v2 · S3 Vectors",
     "label": "below"
@@ -2011,8 +2011,8 @@
    {
     "s": "model",
     "d": "guard",
-    "kind": "req",
-    "label": "guardrailConfig",
+    "kind": "id",
+    "label": "guardrailConfig · async",
     "n": null,
     "ss": "b",
     "ds": "t",
@@ -2038,7 +2038,11 @@
     "ds": "t",
     "via": [
      [
-      470,
+      560,
+      356
+     ],
+     [
+      560,
       585
      ],
      [
@@ -2080,7 +2084,7 @@
     "s": "gateway",
     "d": "sap",
     "kind": "req",
-    "label": "SigV4",
+    "label": "SigV4 (agent)",
     "n": "6a",
     "ss": "tr",
     "ds": "l",
@@ -2090,7 +2094,7 @@
     "s": "gateway",
     "d": "orders",
     "kind": "req",
-    "label": "SigV4",
+    "label": "SigV4 (agent)",
     "n": "6b",
     "ss": "r",
     "ds": "l",
@@ -2100,7 +2104,7 @@
     "s": "gateway",
     "d": "snowl",
     "kind": "req",
-    "label": "OBO Bearer",
+    "label": "OBO Bearer (user)",
     "n": "6c",
     "ss": "br",
     "ds": "l",
@@ -2181,7 +2185,7 @@
     "key": "agent",
     "x": 100,
     "y": 380,
-    "icon": "bedrock",
+    "icon": "agent",
     "title": "Strands Agent",
     "sub": "build_agent · tool host",
     "label": "below"
@@ -2190,7 +2194,7 @@
     "key": "describe",
     "x": 340,
     "y": 180,
-    "icon": "bedrock",
+    "icon": "tools",
     "title": "describe_entity",
     "sub": "LOCAL · reverse index",
     "label": "below"
@@ -2199,7 +2203,7 @@
     "key": "loadskill",
     "x": 340,
     "y": 380,
-    "icon": "bedrock",
+    "icon": "tools",
     "title": "load_skill",
     "sub": "LOCAL · skill body",
     "label": "below"
@@ -2208,7 +2212,7 @@
     "key": "searchpol",
     "x": 340,
     "y": 640,
-    "icon": "bedrock",
+    "icon": "tools",
     "title": "search_policies",
     "sub": "LOCAL · k=3",
     "label": "below"
@@ -2288,7 +2292,7 @@
   ],
   "groups": [
    {
-    "label": "AWS Cloud · AgentCore (us-west-2)",
+    "label": "AWS Cloud · AgentCore · us-west-2",
     "dashed": false,
     "nodes": [
      "agent",
@@ -2406,9 +2410,18 @@
     "kind": "req",
     "label": "MCP tool call (+ user JWT)",
     "n": "7",
-    "ss": "br",
+    "ss": "b",
     "ds": "b",
-    "via": null
+    "via": [
+     [
+      100,
+      460
+     ],
+     [
+      1090,
+      460
+     ]
+    ]
    },
    {
     "s": "gateway",
@@ -2533,7 +2546,7 @@
     "key": "runtime",
     "x": 470,
     "y": 330,
-    "icon": "bedrock",
+    "icon": "agent",
     "title": "AgentCore Runtime",
     "sub": "Strands · ontology · skills · tools",
     "label": "below"
@@ -2569,7 +2582,7 @@
     "key": "kb",
     "x": 640,
     "y": 640,
-    "icon": "s3",
+    "icon": "bedrock",
     "title": "Knowledge Base",
     "sub": "Titan v2 · S3 Vectors",
     "label": "below"
@@ -2712,7 +2725,7 @@
     "d": "runtime",
     "kind": "req",
     "label": "InvokeAgentRuntime · Bearer JWT",
-    "n": "2",
+    "n": "3",
     "ss": null,
     "ds": null,
     "via": null
@@ -2722,7 +2735,7 @@
     "d": "model",
     "kind": "req",
     "label": "ConverseStream",
-    "n": "3",
+    "n": "4",
     "ss": "bl",
     "ds": "t",
     "via": null
@@ -2771,7 +2784,7 @@
     "d": "gateway",
     "kind": "req",
     "label": "MCP tool calls (+ user JWT)",
-    "n": "4",
+    "n": "5",
     "ss": null,
     "ds": null,
     "via": null
@@ -2786,7 +2799,11 @@
     "ds": "t",
     "via": [
      [
-      720,
+      660,
+      304
+     ],
+     [
+      660,
       100
      ],
      [
@@ -2799,8 +2816,8 @@
     "s": "gateway",
     "d": "sap",
     "kind": "req",
-    "label": "SigV4 · AWS_IAM",
-    "n": "5a",
+    "label": "SigV4 (agent)",
+    "n": "6a",
     "ss": "tr",
     "ds": "l",
     "via": null
@@ -2809,8 +2826,8 @@
     "s": "gateway",
     "d": "orders",
     "kind": "req",
-    "label": "SigV4 · flagOrder",
-    "n": "5b",
+    "label": "SigV4 (agent)",
+    "n": "6b",
     "ss": "r",
     "ds": "l",
     "via": null
@@ -2819,8 +2836,8 @@
     "s": "gateway",
     "d": "snowl",
     "kind": "req",
-    "label": "OBO Bearer",
-    "n": "5c",
+    "label": "OBO Bearer (user)",
+    "n": "6c",
     "ss": "br",
     "ds": "l",
     "via": null
@@ -2830,7 +2847,7 @@
     "d": "snowflake",
     "kind": "req",
     "label": "OAUTH → as the human · RLS",
-    "n": "6",
+    "n": "7",
     "ss": "r",
     "ds": "l",
     "via": null
@@ -3000,7 +3017,7 @@
     "key": "runtime",
     "x": 1500,
     "y": 330,
-    "icon": "bedrock",
+    "icon": "agent",
     "title": "AgentCore Runtime + Gateway",
     "sub": "Cedar · OBO broker",
     "label": "below"
