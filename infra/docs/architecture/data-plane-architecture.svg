@@ -26,10 +26,10 @@
 <polyline points="236,330 444,330" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="457,356 457,410 430,410 430,464" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="430,516 430,614" fill="none" stroke="#185FA5" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ab)"/>
-<polyline points="496,343 496,410 614,410 614,477" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
+<polyline points="496,343 512,343 512,410 598,410 598,477 614,477" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
 <polyline points="470,356 470,585 640,585 640,614" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
 <polyline points="496,330 694,330" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="720,304 660,304 660,100 340,100 340,124" fill="none" stroke="#185FA5" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ab)"/>
+<polyline points="720,304 720,288 660,288 660,100 340,100 340,124" fill="none" stroke="#185FA5" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ab)"/>
 <polyline points="746,317 860,317 860,222 974,222" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="746,330 974,330" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="746,343 860,343 860,438 974,438" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
