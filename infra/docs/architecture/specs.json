@@ -6,13 +6,13 @@
   "desc": "Combined whole-lifecycle view of the order-triage AgentCore mono-repo, fusing all nine planes. TOP tributary (Build & deploy, B1-B6): the knowledge corpus (ontology · skills · KB docs) and mono-repo flow through path-filtered CI and the agent-build / stubs-release publishers, past the offline eval gate, into ECR + S3 artifacts, then a human-gated, OIDC-auth terraform apply. The apply provisions the MIDDLE runtime spine (Request track R1-R7): an Entra-authenticated analyst invokes the AgentCore Runtime (CUSTOM_JWT) on Nova Lite behind a Guardrail, with LOCAL knowledge tools, a Knowledge Base, and per-user short/long-term Memory, through the Cedar-guarded MCP Gateway out to the stub Lambdas (SigV4 for sap/orders, Entra-OBO for snowflake) and into Snowflake as the human under RLS. BOTTOM tributary (Observe): runtime telemetry lands in X-Ray + CloudWatch (dashboards, alarms, SLOs); AgentCore Online Evaluations grade the gen_ai spans and feed findings back to the corpus.",
   "size": {
    "w": 2200,
-   "h": 1460
+   "h": 1600
   },
   "nodes": [
    {
     "key": "ontology",
     "x": 110,
-    "y": 110,
+    "y": 100,
     "icon": "tools",
     "title": "Ontology",
     "sub": "objects + actions",
@@ -21,7 +21,7 @@
    {
     "key": "skills",
     "x": 110,
-    "y": 250,
+    "y": 230,
     "icon": "python",
     "title": "Skills",
     "sub": "playbooks (md)",
@@ -30,7 +30,7 @@
    {
     "key": "kbdocs",
     "x": 110,
-    "y": 390,
+    "y": 360,
     "icon": "s3",
     "title": "KB docs",
     "sub": "policy corpus",
@@ -39,7 +39,7 @@
    {
     "key": "monorepo",
     "x": 300,
-    "y": 250,
+    "y": 230,
     "icon": "github",
     "title": "aniryou/bedrock-demo",
     "sub": "agent·lib·knowledge·stubs·infra·app",
@@ -48,7 +48,7 @@
    {
     "key": "ci",
     "x": 300,
-    "y": 390,
+    "y": 360,
     "icon": "ghactions",
     "title": "Path-filtered CI",
     "sub": "lint · pytest · tf · ontology",
@@ -57,7 +57,7 @@
    {
     "key": "agentbuild",
     "x": 700,
-    "y": 110,
+    "y": 100,
     "icon": "ghactions",
     "title": "agent-build.yml",
     "sub": "bakes lib + knowledge · arm64",
@@ -66,7 +66,7 @@
    {
     "key": "offlineeval",
     "x": 700,
-    "y": 250,
+    "y": 230,
     "icon": "shield",
     "title": "Offline eval gate",
     "sub": "pytest + LLM judge",
@@ -75,7 +75,7 @@
    {
     "key": "stubsrel",
     "x": 700,
-    "y": 390,
+    "y": 360,
     "icon": "ghactions",
     "title": "stubs-release.yml",
     "sub": "Lambda zips + OpenAPI",
@@ -84,7 +84,7 @@
    {
     "key": "ecr",
     "x": 940,
-    "y": 110,
+    "y": 100,
     "icon": "ecr",
     "title": "Amazon ECR",
     "sub": "arm64 image :sha",
@@ -93,7 +93,7 @@
    {
     "key": "s3art",
     "x": 940,
-    "y": 390,
+    "y": 360,
     "icon": "s3",
     "title": "S3 artifacts",
     "sub": "zips · OpenAPI · kb/ docs",
@@ -102,7 +102,7 @@
    {
     "key": "approval",
     "x": 1180,
-    "y": 110,
+    "y": 100,
     "icon": "shield",
     "title": "Manual approval",
     "sub": "deploy.yml · env:production",
@@ -111,7 +111,7 @@
    {
     "key": "oidc",
     "x": 1100,
-    "y": 390,
+    "y": 360,
     "icon": "iam",
     "title": "GitHub OIDC role",
     "sub": "deploy · env:production trust",
@@ -120,16 +120,34 @@
    {
     "key": "tfapply",
     "x": 1260,
-    "y": 250,
+    "y": 230,
     "icon": "terraform",
     "title": "terraform apply",
     "sub": "S3 remote state · preflight",
     "label": "below"
    },
    {
+    "key": "entra",
+    "x": 520,
+    "y": 600,
+    "icon": "entra",
+    "title": "Microsoft Entra ID",
+    "sub": "Users · OBO provider · agent app",
+    "label": "left"
+   },
+   {
+    "key": "cedar",
+    "x": 1080,
+    "y": 600,
+    "icon": "shield",
+    "title": "Cedar Policy Engine",
+    "sub": "ENFORCE · OAuthUser · permit_*",
+    "label": "below"
+   },
+   {
     "key": "user",
     "x": 490,
-    "y": 640,
+    "y": 770,
     "icon": "user",
     "title": "Analyst",
     "sub": "human caller",
@@ -138,34 +156,34 @@
    {
     "key": "webapp",
     "x": 630,
-    "y": 640,
+    "y": 770,
     "icon": "client",
     "title": "Application",
     "sub": "Entra sign-in (browser)",
     "label": "below"
    },
    {
-    "key": "entra",
-    "x": 540,
-    "y": 470,
-    "icon": "entra",
-    "title": "Microsoft Entra ID",
-    "sub": "Users · OBO provider · agent app",
-    "label": "right"
-   },
-   {
     "key": "runtime",
     "x": 930,
-    "y": 640,
+    "y": 770,
     "icon": "agent",
     "title": "AgentCore Runtime",
     "sub": "Strands · ontology · skills · tools",
     "label": "below"
    },
    {
+    "key": "gateway",
+    "x": 1180,
+    "y": 770,
+    "icon": "apigw",
+    "title": "AgentCore Gateway",
+    "sub": "MCP · OBO broker",
+    "label": "below"
+   },
+   {
     "key": "model",
     "x": 930,
-    "y": 810,
+    "y": 940,
     "icon": "bedrock",
     "title": "Bedrock Nova Lite",
     "sub": "amazon.nova-lite-v1:0",
@@ -174,7 +192,7 @@
    {
     "key": "guard",
     "x": 930,
-    "y": 980,
+    "y": 1110,
     "icon": "shield",
     "title": "Bedrock Guardrail",
     "sub": "PROMPT_ATTACK filter",
@@ -183,7 +201,7 @@
    {
     "key": "localtools",
     "x": 700,
-    "y": 810,
+    "y": 940,
     "icon": "tools",
     "title": "LOCAL tools",
     "sub": "describe · load_skill · search",
@@ -192,7 +210,7 @@
    {
     "key": "kb",
     "x": 700,
-    "y": 980,
+    "y": 1110,
     "icon": "bedrock",
     "title": "Knowledge Base",
     "sub": "Titan v2 · S3 Vectors",
@@ -201,7 +219,7 @@
    {
     "key": "memshort",
     "x": 1130,
-    "y": 810,
+    "y": 940,
     "icon": "db",
     "title": "Memory · short-term",
     "sub": "raw events · in-session · 90d",
@@ -210,34 +228,16 @@
    {
     "key": "memlong",
     "x": 1130,
-    "y": 980,
+    "y": 1110,
     "icon": "db",
     "title": "Memory · long-term",
     "sub": "semantic · preference · summary",
     "label": "below"
    },
    {
-    "key": "gateway",
-    "x": 1180,
-    "y": 640,
-    "icon": "apigw",
-    "title": "AgentCore Gateway",
-    "sub": "MCP · OBO broker",
-    "label": "below"
-   },
-   {
-    "key": "cedar",
-    "x": 1080,
-    "y": 470,
-    "icon": "shield",
-    "title": "Cedar Policy Engine",
-    "sub": "ENFORCE · OAuthUser · permit_*",
-    "label": "below"
-   },
-   {
     "key": "sap",
     "x": 1460,
-    "y": 532,
+    "y": 662,
     "icon": "lambda",
     "title": "SAP credit",
     "sub": "SigV4 · AWS_IAM",
@@ -246,7 +246,7 @@
    {
     "key": "orders",
     "x": 1460,
-    "y": 640,
+    "y": 770,
     "icon": "lambda",
     "title": "order-actions",
     "sub": "SigV4 · flagOrder",
@@ -255,7 +255,7 @@
    {
     "key": "snowl",
     "x": 1460,
-    "y": 748,
+    "y": 878,
     "icon": "lambda",
     "title": "snowflake-query",
     "sub": "OBO Bearer | KEYPAIR_JWT",
@@ -264,7 +264,7 @@
    {
     "key": "secrets",
     "x": 1460,
-    "y": 980,
+    "y": 1110,
     "icon": "secrets",
     "title": "Secrets Manager",
     "sub": "RSA key · OBO secret",
@@ -273,7 +273,7 @@
    {
     "key": "snowflake",
     "x": 1980,
-    "y": 748,
+    "y": 878,
     "icon": "snowflake",
     "title": "Snowflake",
     "sub": "EXTERNAL_OAUTH · RLS · tables",
@@ -282,7 +282,7 @@
    {
     "key": "xray",
     "x": 790,
-    "y": 1180,
+    "y": 1310,
     "icon": "xray",
     "title": "X-Ray",
     "sub": "gen_ai spans · Tx Search",
@@ -291,7 +291,7 @@
    {
     "key": "cwlogs",
     "x": 1030,
-    "y": 1180,
+    "y": 1310,
     "icon": "cwlogs",
     "title": "CloudWatch Logs",
     "sub": "EMF token metric · PII mask",
@@ -300,7 +300,7 @@
    {
     "key": "dashboards",
     "x": 1260,
-    "y": 1180,
+    "y": 1310,
     "icon": "cloudwatch",
     "title": "Dashboards",
     "sub": "4 audiences",
@@ -309,7 +309,7 @@
    {
     "key": "alerts",
     "x": 1460,
-    "y": 1180,
+    "y": 1310,
     "icon": "alarm",
     "title": "Alarms → SNS",
     "sub": "composite → email",
@@ -318,7 +318,7 @@
    {
     "key": "slo",
     "x": 1660,
-    "y": 1180,
+    "y": 1310,
     "icon": "cloudwatch",
     "title": "App Signals SLOs",
     "sub": "latency · availability",
@@ -327,7 +327,7 @@
    {
     "key": "onlineeval",
     "x": 1880,
-    "y": 1180,
+    "y": 1310,
     "icon": "bedrock",
     "title": "Online Evaluations",
     "sub": "grade gen_ai spans · opt-in",
@@ -431,11 +431,11 @@
     "via": [
      [
       200,
-      110
+      100
      ],
      [
       200,
-      250
+      230
      ]
     ]
    },
@@ -460,11 +460,11 @@
     "via": [
      [
       200,
-      390
+      360
      ],
      [
       200,
-      250
+      230
      ]
     ]
    },
@@ -489,11 +489,11 @@
     "via": [
      [
       560,
-      250
+      230
      ],
      [
       560,
-      110
+      100
      ]
     ]
    },
@@ -508,11 +508,11 @@
     "via": [
      [
       560,
-      250
+      230
      ],
      [
       560,
-      390
+      360
      ]
     ]
    },
@@ -537,11 +537,11 @@
     "via": [
      [
       820,
-      250
+      230
      ],
      [
       820,
-      110
+      100
      ]
     ]
    },
@@ -576,11 +576,11 @@
     "via": [
      [
       1040,
-      390
+      360
      ],
      [
       1040,
-      170
+      150
      ]
     ]
    },
@@ -595,11 +595,11 @@
     "via": [
      [
       1180,
-      200
+      180
      ],
      [
       1260,
-      200
+      180
      ]
     ]
    },
@@ -633,11 +633,11 @@
     "via": [
      [
       1260,
-      330
+      310
      ],
      [
       930,
-      330
+      310
      ]
     ]
    },
@@ -702,11 +702,11 @@
     "via": [
      [
       898,
-      730
+      860
      ],
      [
       700,
-      730
+      860
      ]
     ]
    },
@@ -721,15 +721,15 @@
     "via": [
      [
       898,
-      760
+      890
      ],
      [
       620,
-      760
+      890
      ],
      [
       620,
-      980
+      1110
      ]
     ]
    },
@@ -744,11 +744,11 @@
     "via": [
      [
       930,
-      710
+      840
      ],
      [
       1130,
-      710
+      840
      ]
     ]
    },
@@ -783,11 +783,11 @@
     "via": [
      [
       1080,
-      560
+      690
      ],
      [
       1180,
-      560
+      690
      ]
     ]
    },
@@ -802,11 +802,11 @@
     "via": [
      [
       1180,
-      420
+      540
      ],
      [
-      540,
-      420
+      520,
+      540
      ]
     ]
    },
@@ -871,15 +871,15 @@
     "via": [
      [
       930,
-      705
+      835
      ],
      [
       790,
-      705
+      835
      ],
      [
       790,
-      1148
+      1278
      ]
     ]
    },
@@ -894,15 +894,15 @@
     "via": [
      [
       930,
-      690
+      820
      ],
      [
       1030,
-      690
+      820
      ],
      [
       1030,
-      1148
+      1278
      ]
     ]
    },
@@ -947,11 +947,11 @@
     "via": [
      [
       790,
-      1290
+      1420
      ],
      [
       1880,
-      1290
+      1420
      ]
     ]
    },
@@ -966,20 +966,20 @@
     "via": [
      [
       1880,
-      1330
+      1460
      ],
      [
       60,
-      1330
+      1460
      ],
      [
       60,
-      110
+      100
      ]
     ]
    }
   ],
-  "notes": "Combined hero (replaces the simplified system-overview): spine + two tributaries + one return edge, fusing all nine planes into one lifecycle. Build & deploy track B1-B6 runs left-to-right across the top then drops a single vertical 'provisions' arrow (B6) onto the Runtime, routed left of Cedar/OIDC. Request track R1-R7 is the data-plane spine (Cedar ENFORCE explicit, the SigV4-vs-OBO 6a/6b/6c egress split, Snowflake EXTERNAL_OAUTH+RLS). Knowledge appears as the corpus (build) + LOCAL tools + Knowledge Base (runtime); Memory is split short/long-term; Evaluation has two touchpoints — the offline gate inside the build and Online Evaluations grading live gen_ai spans. Observability (X-Ray, CW Logs, dashboards, alarms, SLOs) is the grey bottom strip; telemetry edges are unnumbered. The lone grey return edge onlineeval->ontology closes the lifecycle loop without forcing a numbered cycle. Snowflake sits outside the AWS Cloud boundary (external EXTERNAL_OAUTH egress). Coordinates calibrated for zero overlap; regenerate via the architecture-skill — never hand-edit the SVG."
+  "notes": "Combined hero (replaces the simplified system-overview): spine + two tributaries + one return edge, fusing all nine planes into one lifecycle. A wide vertical gutter separates the Build & deploy band (top, y100-360) from the runtime spine (y600-1110) so the AWS Cloud zone border and the crossing identity edges have clear air. Build & deploy track B1-B6 runs left-to-right across the top then drops a single 'provisions' arrow (B6) into the Runtime. Request track R1-R7 is the data-plane spine (Cedar ENFORCE explicit, the SigV4-vs-OBO 6a/6b/6c egress split, Snowflake EXTERNAL_OAUTH+RLS). Knowledge appears as the corpus (build) + LOCAL tools + Knowledge Base (runtime); Memory is split short/long-term; Evaluation has two touchpoints — the offline gate inside the build and Online Evaluations grading live gen_ai spans. Observability (X-Ray, CW Logs, dashboards, alarms, SLOs) is the grey bottom strip; telemetry edges are unnumbered. The lone grey return edge onlineeval->ontology closes the lifecycle loop without forcing a numbered cycle. Snowflake sits outside the AWS Cloud boundary (external EXTERNAL_OAUTH egress). Coordinates calibrated for zero overlap; regenerate via the architecture-skill — never hand-edit the SVG."
  },
  {
   "key": "security",
