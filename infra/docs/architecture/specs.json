@@ -30,7 +30,7 @@
    {
     "key": "entra",
     "x": 210,
-    "y": 116,
+    "y": 150,
     "icon": "entra",
     "title": "Microsoft Entra ID",
     "sub": "user IdP · brokers per-user OBO",
@@ -237,11 +237,11 @@
     "via": [
      [
       690,
-      92
+      100
      ],
      [
       210,
-      92
+      100
      ]
     ]
    },
@@ -304,13 +304,13 @@
   "subtitle": "One InvokeAgentRuntime turn inside the CUSTOM_JWT gate: Strands event loop drives Nova Lite (+Guardrail), LOCAL knowledge tools, the Cedar-guarded MCP Gateway, and per-user Memory",
   "desc": "Per-turn reasoning loop of the order-triage AgentCore agent: caller -> AgentCore Runtime (CUSTOM_JWT) -> Strands Agent event loop, which calls Bedrock Nova Lite (+Guardrail), LOCAL tools over the three knowledge surfaces (Knowledge Base -> S3 Vectors, ontology + skills corpus), the AgentCore Gateway (MCP, Cedar ENFORCE) to backend Lambdas, and reads/writes AgentCore Memory.",
   "size": {
-   "w": 1420,
-   "h": 820
+   "w": 1360,
+   "h": 780
   },
   "nodes": [
    {
     "key": "caller",
-    "x": 90,
+    "x": 70,
     "y": 330,
     "icon": "client",
     "title": "Caller",
@@ -319,7 +319,7 @@
    },
    {
     "key": "runtime",
-    "x": 240,
+    "x": 220,
     "y": 330,
     "icon": "agent",
     "title": "AgentCore Runtime",
@@ -328,7 +328,7 @@
    },
    {
     "key": "agent",
-    "x": 450,
+    "x": 430,
     "y": 330,
     "icon": "agent",
     "title": "Strands Agent",
@@ -337,7 +337,7 @@
    },
    {
     "key": "model",
-    "x": 450,
+    "x": 430,
     "y": 160,
     "icon": "bedrock",
     "title": "Bedrock Nova Lite",
@@ -346,7 +346,7 @@
    },
    {
     "key": "guard",
-    "x": 300,
+    "x": 280,
     "y": 160,
     "icon": "shield",
     "title": "Bedrock Guardrail",
@@ -355,7 +355,7 @@
    },
    {
     "key": "localtools",
-    "x": 720,
+    "x": 700,
     "y": 330,
     "icon": "tools",
     "title": "LOCAL tools",
@@ -364,7 +364,7 @@
    },
    {
     "key": "kb",
-    "x": 1000,
+    "x": 980,
     "y": 250,
     "icon": "bedrock",
     "title": "Knowledge Base",
@@ -373,7 +373,7 @@
    },
    {
     "key": "s3v",
-    "x": 1280,
+    "x": 1230,
     "y": 250,
     "icon": "s3",
     "title": "S3 Vectors",
@@ -382,7 +382,7 @@
    },
    {
     "key": "corpus",
-    "x": 1000,
+    "x": 980,
     "y": 420,
     "icon": "db",
     "title": "Ontology + skills",
@@ -391,7 +391,7 @@
    },
    {
     "key": "mcptools",
-    "x": 720,
+    "x": 700,
     "y": 600,
     "icon": "tools",
     "title": "MCP tools",
@@ -400,7 +400,7 @@
    },
    {
     "key": "gateway",
-    "x": 1000,
+    "x": 980,
     "y": 600,
     "icon": "apigw",
     "title": "AgentCore Gateway",
@@ -409,7 +409,7 @@
    },
    {
     "key": "backends",
-    "x": 1280,
+    "x": 1230,
     "y": 600,
     "icon": "lambda",
     "title": "Backend Lambdas",
@@ -418,7 +418,7 @@
    },
    {
     "key": "memory",
-    "x": 450,
+    "x": 430,
     "y": 560,
     "icon": "db",
     "title": "AgentCore Memory",
@@ -427,7 +427,7 @@
    },
    {
     "key": "ns",
-    "x": 240,
+    "x": 220,
     "y": 560,
     "icon": "db",
     "title": "LT namespaces",
@@ -626,7 +626,7 @@
   "desc": "The per-user memory plane: the Entra subject becomes actor_id; the AgentCore Runtime writes short-term events to AgentCore Memory every turn (async), an extraction pipeline populates three long-term strategies (SEMANTIC/facts, USER_PREFERENCE/preferences, SUMMARIZATION/summaries) keyed per actor_id, and each user turn retrieves and prepends a user_context block to the model prompt.",
   "size": {
    "w": 1660,
-   "h": 740
+   "h": 630
   },
   "nodes": [
    {
@@ -990,13 +990,13 @@
   "subtitle": "Source (telemetry emitters) → Routing + Enrichment (log groups · X-Ray · evaluations) → Destination (governance / operations dashboards · anomaly alarms → SNS → email). Off the InvokeAgentRuntime request path.",
   "desc": "Grey control plane of the order-triage AgentCore system. Two independent emission mechanisms — ADOT gen_ai.* spans to X-Ray Transaction Search (aws/spans), and a hand-rolled per-turn EMF token metric printed to the UNMASKED runtime -DEFAULT log group and auto-extracted into the OrderTriage/Agent namespace — feed per-resource APPLICATION_LOGS / USAGE_LOGS / TRACES delivery trios plus the MASKED Bedrock model-invocation log. Downstream: 4 audience dashboards, the static+anomaly alarms rolling into a composite to SNS and email, Contributor Insights, App-Signals SLOs, and opt-in online Evaluations.",
   "size": {
-   "w": 1780,
+   "w": 1660,
    "h": 1060
   },
   "nodes": [
    {
     "key": "guard",
-    "x": 95,
+    "x": 70,
     "y": 215,
     "icon": "shield",
     "title": "Bedrock Guardrail",
@@ -1005,7 +1005,7 @@
    },
    {
     "key": "model",
-    "x": 255,
+    "x": 230,
     "y": 215,
     "icon": "bedrock",
     "title": "Bedrock Nova Lite",
@@ -1014,7 +1014,7 @@
    },
    {
     "key": "runtime",
-    "x": 175,
+    "x": 150,
     "y": 405,
     "icon": "agent",
     "title": "AgentCore Runtime",
@@ -1023,7 +1023,7 @@
    },
    {
     "key": "memory",
-    "x": 175,
+    "x": 150,
     "y": 575,
     "icon": "db",
     "title": "AgentCore Memory",
@@ -1032,7 +1032,7 @@
    },
    {
     "key": "gateway",
-    "x": 175,
+    "x": 150,
     "y": 750,
     "icon": "apigw",
     "title": "AgentCore Gateway",
@@ -1041,7 +1041,7 @@
    },
    {
     "key": "kb",
-    "x": 175,
+    "x": 150,
     "y": 925,
     "icon": "bedrock",
     "title": "Bedrock KB",
@@ -1050,7 +1050,7 @@
    },
    {
     "key": "modellogs",
-    "x": 620,
+    "x": 595,
     "y": 215,
     "icon": "cwlogs",
     "title": "Model Invocation Logs",
@@ -1059,7 +1059,7 @@
    },
    {
     "key": "rtlog",
-    "x": 620,
+    "x": 595,
     "y": 430,
     "icon": "cwlogs",
     "title": "Runtime Default Log",
@@ -1068,7 +1068,7 @@
    },
    {
     "key": "xray",
-    "x": 620,
+    "x": 595,
     "y": 660,
     "icon": "xray",
     "title": "X-Ray Transaction Search",
@@ -1077,7 +1077,7 @@
    },
    {
     "key": "vusage",
-    "x": 620,
+    "x": 595,
     "y": 830,
     "icon": "cwlogs",
     "title": "Vended Usage Logs",
@@ -1086,7 +1086,7 @@
    },
    {
     "key": "vapp",
-    "x": 620,
+    "x": 595,
     "y": 970,
     "icon": "cwlogs",
     "title": "Vended App Logs",
@@ -1095,7 +1095,7 @@
    },
    {
     "key": "evals",
-    "x": 910,
+    "x": 885,
     "y": 320,
     "icon": "bedrock",
     "title": "Online Evaluations",
@@ -1104,7 +1104,7 @@
    },
    {
     "key": "anomaly",
-    "x": 910,
+    "x": 885,
     "y": 510,
     "icon": "alarm",
     "title": "Anomaly Alarms",
@@ -1113,7 +1113,7 @@
    },
    {
     "key": "spans",
-    "x": 910,
+    "x": 885,
     "y": 690,
     "icon": "cwlogs",
     "title": "Spans Log Group",
@@ -1122,7 +1122,7 @@
    },
    {
     "key": "govdash",
-    "x": 1300,
+    "x": 1275,
     "y": 340,
     "icon": "cloudwatch",
     "title": "Governance Dashboard",
@@ -1131,7 +1131,7 @@
    },
    {
     "key": "opsdash",
-    "x": 1300,
+    "x": 1275,
     "y": 560,
     "icon": "cloudwatch",
     "title": "Operations Dashboard",
@@ -1140,7 +1140,7 @@
    },
    {
     "key": "alerts",
-    "x": 1300,
+    "x": 1275,
     "y": 780,
     "icon": "sns",
     "title": "Alerts Topic",
@@ -1149,7 +1149,7 @@
    },
    {
     "key": "email",
-    "x": 1570,
+    "x": 1545,
     "y": 780,
     "icon": "ses",
     "title": "Email Alert",
@@ -1289,7 +1289,7 @@
     "ds": "l",
     "via": [
      [
-      1110,
+      1085,
       430
      ]
     ]
@@ -1354,7 +1354,7 @@
     "ds": "bl",
     "via": [
      [
-      1110,
+      1085,
       830
      ]
     ]
@@ -1379,7 +1379,7 @@
     "ds": "bl",
     "via": [
      [
-      1110,
+      1085,
       970
      ]
     ]
@@ -1545,7 +1545,7 @@
    {
     "key": "dash",
     "x": 1410,
-    "y": 660,
+    "y": 640,
     "icon": "cloudwatch",
     "title": "Operations dashboard",
     "sub": "eval panel · quality note",
@@ -1790,8 +1790,8 @@
   "subtitle": "The whole component map at a glance: Entra CUSTOM_JWT in -> Strands Runtime on Nova Lite -> Cedar-guarded MCP Gateway -> stub Lambdas + OBO into Snowflake, all emitting to CloudWatch",
   "desc": "Left-to-right AWS component map of the order-triage AgentCore system.",
   "size": {
-   "w": 1540,
-   "h": 790
+   "w": 1680,
+   "h": 820
   },
   "nodes": [
    {
@@ -2179,7 +2179,7 @@
   "desc": "Structural knowledge plane of the order-triage AgentCore agent: the knowledge corpus (42-object ontology + actions, skills, KB policy docs, compiled to a bindings.json reverse index) is baked into the agent image and consumed through three LOCAL tools — describe_entity (ontology), load_skill (skills), search_policies (Bedrock Knowledge Base over S3 Vectors). Ontology Actions bind to AgentCore Gateway MCP tools via ACTION_IMPLEMENTATIONS (Cedar ENFORCE), egressing to backend Lambdas.",
   "size": {
    "w": 1460,
-   "h": 820
+   "h": 780
   },
   "nodes": [
    {
@@ -2230,7 +2230,7 @@
    {
     "key": "actions",
     "x": 830,
-    "y": 180,
+    "y": 300,
     "icon": "db",
     "title": "Ontology · Actions",
     "sub": "mutate · target · authority",
@@ -2248,7 +2248,7 @@
    {
     "key": "kbdocs",
     "x": 600,
-    "y": 540,
+    "y": 580,
     "icon": "db",
     "title": "KB policy docs",
     "sub": "kb/*.md · chunk concerns",
@@ -2512,8 +2512,8 @@
   "subtitle": "The full request/data flow of one InvokeAgentRuntime call: Entra CUSTOM_JWT in → Strands on Nova Lite → Cedar ENFORCE at the MCP Gateway → SigV4 (agent) vs Entra-OBO (user) egress → Snowflake EXTERNAL_OAUTH + RLS as the calling human",
   "desc": "Detailed sibling of the system overview: same whole-system scope but expands the identity / authorization / OBO / RLS chain. One InvokeAgentRuntime call from an Entra-authenticated caller, through the AgentCore Runtime (CUSTOM_JWT) and the Cedar-guarded MCP Gateway, out to the stub Lambdas (SigV4 for sap/orders, Entra-OBO Bearer for snowflake), and into Snowflake as the signed-in human (EXTERNAL_OAUTH + RLS). Grey edges are the observability control plane.",
   "size": {
-   "w": 1540,
-   "h": 790
+   "w": 1680,
+   "h": 820
   },
   "nodes": [
    {
@@ -2925,12 +2925,12 @@
   "desc": "Delivery plane of the mono-repo: a push/merge to aniryou/bedrock-demo triggers path-filtered GitHub Actions — per-folder *-ci validation, agent-build (bakes in-tree knowledge -> ARM64 image to ECR + KB docs to S3) on agent/ or knowledge/ changes, and stubs-release (Lambda zips + OpenAPI to S3) on stubs/ changes. The publishers repository_dispatch (agent-image-published / stubs-published) into the gated deploy.yml, which blocks on a manual approval, assumes the deploy OIDC role (env:production), runs preflight, and terraform apply's against S3 remote state into the live AgentCore stack.",
   "size": {
    "w": 1820,
-   "h": 820
+   "h": 780
   },
   "nodes": [
    {
     "key": "dev",
-    "x": 90,
+    "x": 130,
     "y": 360,
     "icon": "user",
     "title": "Developer",
