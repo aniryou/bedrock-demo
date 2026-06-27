@@ -28,8 +28,8 @@
 <polyline points="646,417 765,417 765,320 884,320" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="936,320 1105,320 1105,300 1274,300" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="646,443 765,443 765,510 884,510" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="936,510 1112,510 1112,859 1287,859" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
-<polyline points="646,430 1274,430 1274,620" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
+<polyline points="936,510 1112,510 1112,843 1287,843 1287,859" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
+<polyline points="646,430 1258,430 1258,620 1274,620" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
 <polyline points="201,418 398,418 398,660 594,660" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
 <polyline points="201,575 398,575 398,660 594,660" fill="none" stroke="#888780" stroke-width="1.4" marker-end="url(#ag)"/>
 <polyline points="646,660 765,660 765,690 884,690" fill="none" stroke="#444441" stroke-width="2.2" marker-end="url(#ad)"/>
