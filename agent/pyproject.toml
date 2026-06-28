@@ -8,19 +8,15 @@ version = "0.1.0"
 description = "Snowflake-backed Strands order-triage agent for Amazon Bedrock AgentCore"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
-dependencies = [
-    "strands-agents>=1.40.0",  # Bedrock model + Agent + MCP gateway client (pulls in mcp)
-    "boto3>=1.35.0",           # Bedrock Knowledge Base retrieve
-    "pyyaml>=6.0",             # skill-manifest frontmatter
-]
+# The agent is a thin consumer of agent_kit: strands/boto3/pyyaml and the deploy extra all
+# arrive transitively via agent-kit.
+dependencies = ["agent-kit"]
 
 [project.optional-dependencies]
-# Installed in the AgentCore Runtime image (see Dockerfile).
-deploy = [
-    "bedrock-agentcore>=0.1.0",
-    "aws-opentelemetry-distro>=0.10.0",
-]
 dev = ["pytest>=8.0", "ruff>=0.6.0"]
+
+[tool.uv.sources]
+agent-kit = { path = "../lib", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/order_triage"]

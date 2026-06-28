@@ -24,12 +24,12 @@ import logging
 from contextvars import ContextVar
 from dataclasses import dataclass
 
-_LOG = logging.getLogger("order_triage.identity")
+_LOG = logging.getLogger("agent_kit.identity")
 
 # The shared, non-user-specific memory actor used when no verified user subject is
 # available (e.g. a token without `sub`/`oid`, or a malformed one) — a shared namespace
 # rather than failing the turn.
-ANONYMOUS_ACTOR = "order-triage"
+ANONYMOUS_ACTOR = "anonymous"
 
 
 @dataclass(frozen=True)
@@ -68,6 +68,21 @@ def _str_claim(claims: dict, *names: str) -> str | None:
         value = claims.get(name)
         if isinstance(value, str) and value:
             return value
+    return None
+
+
+def extract_user_jwt(context, header_name: str = "Authorization") -> str | None:
+    """Pull the inbound user bearer from the request headers (CUSTOM_JWT inbound)."""
+    headers = getattr(context, "request_headers", None) if context else None
+    if not headers:
+        return None
+    want = header_name.lower()
+    for k, v in headers.items():
+        if k.lower() == want and isinstance(v, str):
+            v = v.strip()
+            if v.lower().startswith("bearer "):
+                v = v[7:].strip()
+            return v or None
     return None
 
 

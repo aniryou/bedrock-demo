@@ -1,8 +1,8 @@
 # CLAUDE.md — working notes for this repo
 
 `bedrock-demo-infra`: Terraform (+ a small `infra/` preflight/registry helper) that deploys the
-**order-triage AgentCore** demo to **us-west-2**. It is one of a 5-repo split and consumes the
-others' *published artifacts* as inputs — it does not build them:
+**order-triage AgentCore** demo to **us-west-2**. It is one folder of the `bedrock-demo` mono-repo
+and consumes the other folders' *published artifacts* as inputs — it does not build them:
 
 | Folder | Produces | Consumed here as |
 |---|---|---|
@@ -21,7 +21,7 @@ others' *published artifacts* as inputs — it does not build them:
 - `snowflake/` — `setup.sql`, `rls.sql`, `semantic_view.sql` (the `ORDERS_SV` Cortex-Analyst model,
   ADR-0008), `test_user.sql` (applied outside the main apply via `make apply-sql FILES=...`).
 - `docs/` — `adr/` (decisions), `architecture/` (the AWS-style plane diagrams + their `specs.json`
-  source, the `system-overview` hero, and the detailed `data-plane.md`),
+  source, the `end-to-end` lifecycle hero, and the detailed `data-plane.md`),
   `playbooks/` (runbooks: cd-setup · entra-obo-setup · snowflake-bootstrap · deploy · observability-impl-plan),
   `research/` (spikes & audits behind the ADRs).
 - Config is a **single `../.env`** at the workspace root (gitignored); `make` resolves `TF_VAR_*`
@@ -64,9 +64,9 @@ CI/CD (auto-publish cascade + human-gated apply) is documented in `docs/playbook
 - **Decisions go in ADRs** (`docs/adr/`, follow the 0001–0005 format: Status/Date/Deciders/
   Related → Context → Decision → Options → Consequences → Risks → Action items → References).
   Keep the README **current-state only** — the "why / how we got here" belongs in ADRs. Keep the
-  ADRs current as decisions change and consistent with the rest of the 5-repo split.
+  ADRs current as decisions change and consistent with the rest of the mono-repo.
 - **Don't hand-edit generated diagrams.** The nine AWS-style diagrams `docs/architecture/*-architecture.svg`
-  — the `system-overview` hero, the detailed `data-plane`, and seven cross-section planes (agent, knowledge,
+  — the `end-to-end` lifecycle hero, the detailed `data-plane`, and seven cross-section planes (agent, knowledge,
   security, memory, observability, evaluation, devops) — come from the **`architecture-skill`** skill. The
   renderer (`_archviz.py` + `generate.py`) is **not vendored here**; only the editable source
   `docs/architecture/specs.json` lives in the repo. To edit/add/convert one: change `specs.json` (node/edge/group

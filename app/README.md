@@ -15,8 +15,9 @@ carries only the user bearer.
 
 ## How it fits
 
-One of **five components** in the [bedrock-demo](../README.md) mono-repo — see
-[The five components](../README.md#the-five-components) for the full map and hand-offs.
+One of the **six top-level folders** in the [bedrock-demo](../README.md) mono-repo (the five
+pipeline components plus the shared lib) — see [The components](../README.md#the-components)
+for the full map and hand-offs.
 The OBO sign-in client and demo driver: it takes an Entra user JWT and calls the deployed OBO runtime that the [infra](../infra/README.md) stack produces, so the agent impersonates the signed-in user and Snowflake RBAC/RLS decides what they see.
 
 ## Repository structure

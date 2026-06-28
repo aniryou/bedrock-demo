@@ -15,8 +15,9 @@ where `../infra` wires them up as the live Gateway's tool targets.
 
 ## How it fits
 
-One of **five components** in the [bedrock-demo](../README.md) mono-repo — see
-[The five components](../README.md#the-five-components) for the full map and hand-offs.
+One of the **six top-level folders** in the [bedrock-demo](../README.md) mono-repo (the five
+pipeline components plus the shared lib) — see [The components](../README.md#the-components)
+for the full map and hand-offs.
 The tool tier: three back-office stub services (SAP, order-actions, Snowflake) that produce
 Lambda zips and OpenAPI specs for `../infra` to deploy, and that the `../agent` invokes as its
 Gateway targets at runtime.

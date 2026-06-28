@@ -2,7 +2,7 @@
 
 Working brief for **order-triage-webapp** — the OBO demo chat client. See
 [README.md](README.md) for the full flow diagram, the two-user demo script, and the
-5-repo split; this file is the orientation an agent needs to work in the code.
+six-folder mono-repo layout; this file is the orientation an agent needs to work in the code.
 
 ## What this is
 
@@ -79,7 +79,7 @@ cp .env.example .env   # then set OBO_RUNTIME_ARN (from terraform output)
 - **The "how it got here" lives in ADRs, not code.** This repo owns none; the OBO and
   classification decisions are recorded in the owning repos' `docs/adr/`
   (`../infra/docs/adr/0001`, `../knowledge/docs/adr/0001`). Keep those
-  current and consistent across the 5-repo split when a decision changes.
+  current and consistent across the mono-repo when a decision changes.
 - **Never log token bytes or claim values, and never leak the upstream runtime body to the
   browser.** `decode_id_claims` reads name/email for display only (no signature check, never
   for authz); the raw runtime error stays server-side, correlated by the opaque session id.

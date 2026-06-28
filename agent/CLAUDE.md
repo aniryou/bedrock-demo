@@ -1,8 +1,11 @@
 # CLAUDE.md
 
-Working brief for **order-triage-agent** — the Strands agent, its local tools, and the
-AgentCore Runtime entrypoint. See `README.md` for full architecture diagrams and the
-5-repo split; this file is the orientation an agent needs to work in the code.
+Working brief for the **order-triage agent** — it OWNS its assembly and composes the shared
+**`agent_kit`** toolkit (`../lib`): it constructs its own `BedrockModel` (with its guardrail/
+model config), wires the AgentCore Runtime entrypoint, and calls lib helpers for the
+agent-agnostic plumbing (prompt, identity, Gateway, memory, metrics, knowledge loaders). See
+`README.md` for full architecture diagrams and the six-folder mono-repo layout; this file is
+the orientation an agent needs to work in the code.
 
 ## Commands
 
@@ -13,7 +16,7 @@ make test      # hermetic unit tests — no network, no model   (uv run pytest t
 make lint      # ruff                       (uv run ruff check .)
 ```
 
-- Run one test: `uv run pytest tests/test_stream_steps.py -k test_name -q`.
+- Run one test: `uv run pytest tests/test_spec.py -k test_name -q`.
 - Python is pinned to 3.12; everything runs through `uv run`.
 - **There is no local run target.** The runtime is Gateway-only and hard-errors without a
   user JWT + `GATEWAY_URL`. Exercise the full path through the deployed runtime (e.g. the
@@ -21,24 +24,29 @@ make lint      # ruff                       (uv run ruff check .)
 
 ## Layout
 
+This agent **composes `agent_kit`** (the in-tree library at `../lib`) and **owns all
+configuration**. `agent_kit` is a pure toolkit of helpers — prompt assembly, identity,
+Gateway client, memory, metrics, skill/ontology/KB loaders, stream classifier — with zero
+control flow and zero config decisions. The agent itself constructs its `BedrockModel`
+(model id, guardrail, token budget) and drives the AgentCore runtime loop.
+
 - `src/order_triage/`
-  - `agent.py` — `build_agent()`: assembles the system prompt, tool surface, `BedrockModel`
-    (built inline), and memory. The single constructor used by the runtime.
-  - `runtime.py` — AgentCore entrypoint (`BedrockAgentCoreApp`, `/invocations` + `/ping`):
-    forwards the inbound user JWT, opens the Gateway MCP session for the turn, streams
-    output. Needs the `deploy` extra; not imported by the tests.
-  - `gateway.py` — Gateway MCP client; sends the user JWT as the bearer.
-  - `identity.py` — per-request user identity (a `ContextVar`): the inbound OBO bearer and
-    its subject (the memory `actor_id`).
-  - `memory.py` — AgentCore Memory session manager (short + long term).
-  - `skill_loader.py`, `tools/ontology.py` — read the fetched `skills/` + `bindings.json`.
-  - `tools/` — the **local** tools (`search_policies`, `describe_entity`, `load_skill`).
-  - `stream_steps.py` — pure classifier turning Strands events into typed `__step__`
-    timeline events (unit-tested off the runtime).
-  - `config.py` — env-driven `Config.from_env()`, `lru_cache`d via `get_config()`.
-- `tests/` — hermetic unit tests (local tools, loaders, identity, stream classifier).
+  - `agent.py` — the agent's configuration (model id, region, guardrail, `ACTIONS` Gateway
+    map, KB tool name/description, retrieval namespaces) and `build_agent`, which builds the
+    `BedrockModel` (owning the guardrails) and the Strands `Agent` from lib helpers. Imports
+    `strands` + `agent_kit` only (no `bedrock_agentcore`), so it is import-safe in the tests.
+  - `runtime.py` — the AgentCore entrypoint loop. The `@app.entrypoint` invoke handler on a
+    `BedrockAgentCoreApp` (`/invocations` + `/ping`): forwards the user JWT, opens the Gateway
+    client, calls `build_agent`, streams, and emits the usage metric. Imports
+    `bedrock_agentcore` (the `deploy` extra); not imported by the tests.
+  - `__init__.py` — package `__version__`.
+- `tests/` — per-agent hermetic tests (`test_spec.py`: skill→action coverage of `ACTIONS`).
+  The plumbing's own unit tests live in `../lib/tests`.
 - `skills/`, `ontology/`, `kb/` — fetched content, gitignored (see below).
 - `scripts/fetch_skills.sh`, `Dockerfile`, `Makefile`, `../.github/workflows/` (agent-ci.yml, agent-build.yml).
+
+The Dockerfile builds with the **repo root** as the build context (it installs `../lib`
+then the agent).
 
 ## How it works (orientation)
 
@@ -68,11 +76,11 @@ make lint      # ruff                       (uv run ruff check .)
 - **After generating or editing a mermaid diagram, run the `mermaid-check` skill** and fix
   whatever it flags (parse errors, overlapping nodes/edges) before committing. The README's
   architecture diagram is mermaid.
-- **`identity.py` decodes the JWT payload without verifying the signature** — the CUSTOM_JWT
-  authorizer already verified it upstream, and the subject is used only as a memory
+- **`agent_kit.infra.identity` decodes the JWT payload without verifying the signature** — the
+  CUSTOM_JWT authorizer already verified it upstream, and the subject is used only as a memory
   partition key, never to authorize. Never log token bytes or claim values.
-- **`requestMetadata` values must stay opaque, charset-limited, and PII-free** (`agent.py`
-  strips them); never put an email/UPN/raw subject into a Converse call.
+- **`requestMetadata` values must stay opaque, charset-limited, and PII-free**
+  (`agent_kit.prompt` strips them); never put an email/UPN/raw subject into a Converse call.
 - **Ontology names ≠ Snowflake fields.** The ontology (`SalesOrder.soNumber`, …) is a
   routing/governance map; the backend tools return runtime fields
   (`order_id` / `amount` / `status`). Ontology names are for routing, never tool arguments.

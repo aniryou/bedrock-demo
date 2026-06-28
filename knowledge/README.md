@@ -11,8 +11,9 @@ ultimately consumes.
 
 ## How it fits
 
-One of **five components** in the [bedrock-demo](../README.md) mono-repo — see
-[The five components](../README.md#the-five-components) for the full map and hand-offs.
+One of the **six top-level folders** in the [bedrock-demo](../README.md) mono-repo (the five
+pipeline components plus the shared lib) — see [The components](../README.md#the-components)
+for the full map and hand-offs.
 The upstream source of truth: it compiles the work-stream specs into the ontology + skills + KB that the [order-triage agent](../agent/README.md) bakes in-tree and consumes.
 
 ## Repository structure

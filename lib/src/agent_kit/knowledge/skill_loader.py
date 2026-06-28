@@ -1,5 +1,4 @@
-"""Skill loader — reads ontology-bound skill manifests fetched from the
-order-triage-knowledge repo.
+"""Skill loader — reads ontology-bound skill manifests fetched into the skills dir.
 
 Each skill is a `*.skill.md` file: YAML frontmatter (the ontology binding — `apiName`,
 `description`, `appliesTo`, …) followed by the markdown procedure body. The loader reads
@@ -12,13 +11,12 @@ supported. The loader degrades gracefully to an empty catalog when
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 
 import yaml
-
-from .config import get_config
 
 
 @dataclass(frozen=True)
@@ -54,7 +52,7 @@ def _first_blockquote(text: str) -> str | None:
 
 class SkillLoader:
     def __init__(self, playbook_dir: Path | None = None):
-        self._dir = playbook_dir or get_config().skills_dir
+        self._dir = playbook_dir or Path(os.getenv("SKILLS_DIR", "skills"))
 
     @cached_property
     def _skills(self) -> dict[str, Skill]:

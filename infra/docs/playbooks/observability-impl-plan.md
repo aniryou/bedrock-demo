@@ -104,12 +104,12 @@ resource "aws_cloudwatch_log_delivery" "runtime_traces" {
 
 | id | change | target file | effort | risk |
 |----|--------|-------------|--------|------|
-| P1.1 | Capture dropped per-turn token usage → EMF + span attr | [runtime.py:65-74](../../../agent/src/order_triage/runtime.py) | low | **medium-conf** (event shape) |
-| P1.2 | Inject Bedrock `requestMetadata` tags (agent/session/actor) | [agent.py:68-76](../../../agent/src/order_triage/agent.py) | low | medium |
-| P1.3 | Structured log on silent JWT-decode fallback | [identity.py:46-55](../../../agent/src/order_triage/identity.py) | trivial | none |
+| P1.1 | Capture dropped per-turn token usage → EMF + span attr | [app.py](../../../lib/src/agent_kit/app.py) | low | **medium-conf** (event shape) |
+| P1.2 | Inject Bedrock `requestMetadata` tags (agent/session/actor) | [agent.py](../../../lib/src/agent_kit/agent.py) | low | medium |
+| P1.3 | Structured log on silent JWT-decode fallback | [identity.py](../../../lib/src/agent_kit/infra/identity.py) | trivial | none |
 | P1.4 | Structured server log on webapp invocation failure + stop leaking body to browser | [main.py:181](../../../app/app/main.py) | trivial | none |
 
-**P1.1 — VERIFIED IN-TREE:** runtime.py's loop today yields `event["data"]` then falls through to `step_events(event)` and **does NOT handle a `"result"` key** — so the terminal `AgentResult` is silently discarded (confirmed runtime.py:67-74). **strands-agents is NOT installed in this repo's env** (verified — `import strands` fails), so the `{"result": AgentResult}` shape and `.metrics.accumulated_usage` TypedDict are **external claims, NOT verified here**. → **Implement with the documented fallback so capture does not depend on the unverified event shape:**
+**P1.1 — VERIFIED IN-TREE:** the entrypoint loop in `agent_kit.app` today yields `event["data"]` then falls through to `step_events(event)` and **does NOT handle a `"result"` key** — so the terminal `AgentResult` is silently discarded. **strands-agents is NOT installed in this repo's env** (verified — `import strands` fails), so the `{"result": AgentResult}` shape and `.metrics.accumulated_usage` TypedDict are **external claims, NOT verified here**. → **Implement with the documented fallback so capture does not depend on the unverified event shape:**
 
 ```python
 import json, logging, time
@@ -156,9 +156,9 @@ with gw_client:
 
 > **Cardinality rule (confirmed correct, not a defect):** EMF `Dimensions = [["agent_id","model_id"]]` only; `session_id`/`actor_id`/`cache_*` are root-level queryable log fields. No cardinality explosion.
 
-**P1.2 — requestMetadata.** agent.py BedrockModel today has **no `additional_args`** (verified :69-74). Add it; Strands spreads `additional_args` at the top level of the Converse request. Values must be **opaque ids only** (actor = Entra `sub` GUID, session = runtime hex) — never email/name. Cap `[:256]`, charset `[a-zA-Z0-9 _@$#=/+,.:-]`. `build_agent` gains an `actor_id` param. **This is inert until Phase 2 model-invocation logging is on** — overlaps FINOPS-SPIKE Tier-1; **tag here, defer dollarization to [FINOPS-SPIKE.md](../research/finops-spike.md).**
+**P1.2 — requestMetadata.** `agent_kit.agent`'s BedrockModel today has **no `additional_args`**. Add it; Strands spreads `additional_args` at the top level of the Converse request. Values must be **opaque ids only** (actor = Entra `sub` GUID, session = runtime hex) — never email/name. Cap `[:256]`, charset `[a-zA-Z0-9 _@$#=/+,.:-]`. `build_agent` gains an `actor_id` param. **This is inert until Phase 2 model-invocation logging is on** — overlaps FINOPS-SPIKE Tier-1; **tag here, defer dollarization to [FINOPS-SPIKE.md](../research/finops-spike.md).**
 
-**P1.3 / P1.4 — structured errors.** identity.py:46-55 swallows the bad-JWT path silently (verified) → log a warning carrying **no token bytes, no claim values** (capped key names only). main.py:181 (`except Exception as exc:`, verified) ships up to 600 chars of raw runtime body to the **browser** → replace with `log.exception(...)` server-side + a generic `{"type":"error","detail":"agent invocation failed; see server logs"}` to the client.
+**P1.3 / P1.4 — structured errors.** `agent_kit.infra.identity` swallows the bad-JWT path silently → log a warning carrying **no token bytes, no claim values** (capped key names only). main.py:181 (`except Exception as exc:`, verified) ships up to 600 chars of raw runtime body to the **browser** → replace with `log.exception(...)` server-side + a generic `{"type":"error","detail":"agent invocation failed; see server logs"}` to the client.
 
 **Definition of Done (P1):** A live invoke yields a **non-zero `TotalTokens` datapoint** in namespace `OrderTriage/Agent` (graphed by agent_id,model_id) AND the Logs-Insights per-session token sum (§3) returns rows; a forced bad JWT logs exactly one `jwt_subject_decode_failed`; a forced upstream 4xx logs one `agent_invocation_failed` with traceback and the browser sees no raw body.
 

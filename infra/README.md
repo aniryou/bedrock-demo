@@ -8,8 +8,9 @@ as inputs and does not reach into their source. Deployed region: **us-west-2**; 
 
 ## How it fits
 
-One of **five components** in the [bedrock-demo](../README.md) mono-repo — see
-[The five components](../README.md#the-five-components) for the full map and hand-offs.
+One of the **six top-level folders** in the [bedrock-demo](../README.md) mono-repo (the five
+pipeline components plus the shared lib) — see [The components](../README.md#the-components)
+for the full map and hand-offs.
 This component is the orchestrator: it provisions the live order-triage AgentCore stack on
 AWS, consuming the published artifacts from `agent` and `stubs` and serving the deployed
 OBO runtime that `app` drives.

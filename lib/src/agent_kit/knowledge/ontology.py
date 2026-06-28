@@ -1,9 +1,9 @@
 """Ontology lookup tool + loader (on-demand, pay-per-use).
 
 `describe_entity` answers "which skills / actions / KB govern this ontology entity?" from
-the release-pinned bindings.json (fetched from order-triage-knowledge into ONTOLOGY_DIR),
-plus its properties / datasource / related governed entities. It pulls context at call time
-exactly like `search_policies` pulls KB chunks — nothing ontology-related sits in the prompt.
+the release-pinned bindings.json (fetched into ONTOLOGY_DIR), plus its properties /
+datasource / related governed entities. It pulls context at call time exactly like the KB
+tool pulls KB chunks — nothing ontology-related sits in the prompt.
 
 The OntologyLoader (a read-only consumer of the design/governance layer) is co-located here
 since `describe_entity` is its only consumer. It degrades gracefully to empty when the
@@ -13,13 +13,12 @@ artifacts are absent, so the agent still runs with zero ontology fetched.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 
 from strands import tool
-
-from ..config import get_config
 
 
 @dataclass(frozen=True)
@@ -37,7 +36,7 @@ class EntityView:
 
 class OntologyLoader:
     def __init__(self, ontology_dir: Path | None = None):
-        self._dir = ontology_dir or get_config().ontology_dir
+        self._dir = ontology_dir or Path(os.getenv("ONTOLOGY_DIR", "ontology"))
 
     @cached_property
     def _bindings(self) -> dict:

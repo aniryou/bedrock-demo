@@ -7,7 +7,8 @@ spans folders.
 | Folder | What it is | Folder brief |
 |---|---|---|
 | `knowledge/` | ontology + skills + KB (source of truth) | `knowledge/CLAUDE.md` |
-| `agent/` | Strands agent + AgentCore Runtime entrypoint | `agent/CLAUDE.md` |
+| `lib/` | `agent_kit` — agent-agnostic Strands + AgentCore toolkit (consumed by `agent/`) | `lib/CLAUDE.md` |
+| `agent/` | Strands agent + AgentCore Runtime entrypoint (thin `agent_kit` consumer) | `agent/CLAUDE.md` |
 | `stubs/` | 3 FastAPI back-office stubs (SAP · orders · Snowflake) | `stubs/CLAUDE.md` |
 | `infra/` | Terraform orchestrator (provisions the live AWS stack) | `infra/CLAUDE.md` |
 | `app/` | FastAPI OBO chat client (the demo driver) | `app/CLAUDE.md` |

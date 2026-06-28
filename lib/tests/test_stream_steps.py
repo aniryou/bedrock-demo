@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 
-from order_triage.stream_steps import step_events, tool_result_text
+from agent_kit.stream_steps import step_events, tool_result_text
 
 
 def _steps(event):

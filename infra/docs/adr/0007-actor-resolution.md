@@ -3,7 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-06-24
 **Deciders:** repo owner
-**Related:** ADR-0001 (OBO / identity), ADR-0004 (observability/FinOps), `order-triage-agent` `identity.py`/`runtime.py`
+**Related:** ADR-0001 (OBO / identity), ADR-0004 (observability/FinOps), the shared lib `agent_kit.infra.identity` + the agent's `runtime.py` entrypoint loop
 
 ## Context
 
