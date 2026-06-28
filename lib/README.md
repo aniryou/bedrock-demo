@@ -192,7 +192,6 @@ flowchart TB
     ba -->|calls| infra
     ba -->|calls| know
     gwtools -->|extra_tools| ba
-    cov -.->|asserts coverage| gwtools
     ba --> runtime
 ```
 
