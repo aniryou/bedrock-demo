@@ -133,6 +133,9 @@ without manual approval. Full runbook:
   0007 actor-resolution · 0008 semantic-view + Cortex Analyst · 0009 Function-URL hardening.
 - **Reference designs** — [`docs/architecture/data-plane.md`](docs/architecture/data-plane.md)
   (detailed data plane) + the [plane index](docs/architecture/README.md) (subsystem diagrams).
+- **The deployed stack, in the console** — [`docs/deployed-stack.md`](docs/deployed-stack.md): a
+  screenshot tour of the live AWS console (Runtime · Gateway · Cedar · Memory · Identity ·
+  Observability), each pane linked to the Terraform that created it.
 - **Runbooks** — [`docs/playbooks/`](docs/playbooks/):
   [snowflake-bootstrap](docs/playbooks/snowflake-bootstrap.md) ·
   [deploy & teardown](docs/playbooks/deploy.md) · [cd-setup](docs/playbooks/cd-setup.md) ·

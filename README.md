@@ -11,6 +11,11 @@ The repository is organized as six top-level folders — the five pipeline compo
 shared lib (`agent_kit`) the agent builds on — each with its own `README.md` and `CLAUDE.md`;
 this root README is the hub that ties them together.
 
+Here's what it produces. An analyst asks in plain English — *"Triage all orders"* — and the
+agent streams its reasoning back live: it picks the right skill, queries Snowflake *as the
+signed-in user*, checks policy, and flags what needs attention, one visible step at a time
+([see it in action](app/README.md#see-it-in-action)).
+
 ## The components
 
 | Folder | Role | Key hand-off |
