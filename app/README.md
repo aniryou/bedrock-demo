@@ -20,23 +20,7 @@ pipeline components plus the shared lib) — see [The components](../README.md#t
 for the full map and hand-offs.
 The OBO sign-in client and demo driver: it takes an Entra user JWT and calls the deployed OBO runtime that the [infra](../infra/README.md) stack produces, so the agent impersonates the signed-in user and Snowflake RBAC/RLS decides what they see.
 
-## Repository structure
-
-```text
-app/
-├── app/
-│   ├── main.py          # FastAPI app: routes, config loading, in-memory session store
-│   ├── entra.py         # Entra auth-code helpers (plain OAuth2 over httpx, no MSAL)
-│   └── agentcore.py     # stream_agent(): invokes the OBO runtime, yields delta/step events
-├── web/
-│   └── index.html       # single-page UI (renders tokens as they stream)
-├── run.sh               # creates .venv, runs uvicorn on http://localhost:8000
-├── requirements.txt     # four deps: fastapi, uvicorn, httpx, python-dotenv
-├── .env                 # webapp-local per-deploy config (OBO_RUNTIME_ARN, WEBAPP_REDIRECT_URI)
-└── (../.env)            # shared bedrock-demo/.env: Entra app config + client secret
-```
-
-## Setup & usage
+## Getting started
 
 **Prerequisites**
 
@@ -59,12 +43,12 @@ cp .env.example .env          # then set OBO_RUNTIME_ARN (from terraform output)
 ./run.sh                      # http://localhost:8000
 ```
 
-Config comes from two `.env` files: the webapp-local `.env` (per-deploy bits) and
-the shared `../.env` (`bedrock-demo/.env`, Entra app config + client secret). Sign
-in as User A in one browser/profile and User B in another (or a private window) to
-see the two outcomes side by side.
+Config is split across two `.env` files (the local per-deploy bits and the shared
+root `../.env`) — see [./CLAUDE.md](CLAUDE.md) for the full breakdown. Sign in as User
+A in one browser/profile and User B in another (or a private window) to see the two
+outcomes side by side.
 
-## Architecture & visualizations
+## Architecture
 
 The browser signs in through Entra, the FastAPI backend completes the confidential
 auth-code exchange, and every chat turn is proxied to the OBO runtime with the user's
@@ -120,7 +104,8 @@ next increment.)
 
 - **OBO decision + runbook:** `../infra/docs/adr/0001-user-impersonation-obo.md`
   and `../infra/docs/playbooks/entra-obo-setup.md`.
-- **Why order vs customer split:** `../knowledge/docs/adr/0001` +
-  `../infra/snowflake/rls.sql`.
+- **Why order vs customer split:**
+  [`../knowledge/docs/adr/0001-ontology-privilege-classification.md`](../knowledge/docs/adr/0001-ontology-privilege-classification.md)
+  + `../infra/snowflake/rls.sql`.
 - **Machine/agent operating instructions** — including the full route catalog and the
   `/chat` NDJSON event-schema reference — live in [CLAUDE.md](CLAUDE.md).

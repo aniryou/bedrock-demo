@@ -155,81 +155,39 @@ flowchart LR
     dep --> live
 ```
 
-| Workflow | Trigger (path-filtered) | Does |
-|---|---|---|
-| [`knowledge-validate.yml`](.github/workflows/knowledge-validate.yml) | PR/push · `knowledge/**` | validate ontology + bindings; drift gates; render overview |
-| [`agent-ci.yml`](.github/workflows/agent-ci.yml) | PR/push · `agent/**` or `lib/**` | ruff + hermetic unit tests + skill-manifest lint |
-| [`lib-ci.yml`](.github/workflows/lib-ci.yml) | PR/push · `lib/**` | ruff + hermetic unit tests for `agent_kit` |
-| [`stubs-ci.yml`](.github/workflows/stubs-ci.yml) | PR/push · `stubs/**` | ruff + FastAPI TestClient tests + Lambda-zip packaging |
-| [`infra-ci.yml`](.github/workflows/infra-ci.yml) | PR/push · `infra/**` | `terraform fmt/validate` + ruff (+ opt-in live `plan`) |
-| [`app-ci.yml`](.github/workflows/app-ci.yml) | PR/push · `app/**` | install deps + byte-compile the backend |
-| [`agent-build.yml`](.github/workflows/agent-build.yml) | push main · `agent/**`, `knowledge/**`, or `lib/**` | bake in-tree knowledge → arm64 image → ECR + KB → S3 → cascade |
-| [`stubs-release.yml`](.github/workflows/stubs-release.yml) | push main · `stubs/**` | build zips + OpenAPI → S3 → cascade |
-| [`deploy.yml`](.github/workflows/deploy.yml) | `repository_dispatch` / manual | **human-gated** `terraform apply` against live state |
+| Workflow | Trigger (path-filtered) |
+|---|---|
+| [`knowledge-validate.yml`](.github/workflows/knowledge-validate.yml) | PR/push · `knowledge/**` |
+| [`agent-ci.yml`](.github/workflows/agent-ci.yml) | PR/push · `agent/**` or `lib/**` |
+| [`lib-ci.yml`](.github/workflows/lib-ci.yml) | PR/push · `lib/**` |
+| [`stubs-ci.yml`](.github/workflows/stubs-ci.yml) | PR/push · `stubs/**` |
+| [`infra-ci.yml`](.github/workflows/infra-ci.yml) | PR/push · `infra/**` |
+| [`app-ci.yml`](.github/workflows/app-ci.yml) | PR/push · `app/**` |
+| [`agent-build.yml`](.github/workflows/agent-build.yml) | push main · `agent/**`, `knowledge/**`, or `lib/**` |
+| [`stubs-release.yml`](.github/workflows/stubs-release.yml) | push main · `stubs/**` |
+| [`deploy.yml`](.github/workflows/deploy.yml) | `repository_dispatch` / manual |
 
-The publish→deploy cascade uses a PAT (`DISPATCH_TOKEN`) because a `GITHUB_TOKEN`-triggered
-`repository_dispatch` deliberately does not start new runs. Full pipeline + secrets/vars
-setup: [`infra/docs/playbooks/cd-setup.md`](infra/docs/playbooks/cd-setup.md).
+The `*-ci` workflows lint and run hermetic tests for their folder; the two publishers
+(`agent-build` / `stubs-release`) build and upload the image, zips, and KB docs on merge to
+`main`, then cascade a `repository_dispatch` into the **human-gated** `deploy.yml` (it uses a
+PAT, since a `GITHUB_TOKEN`-triggered dispatch deliberately starts no new runs). Full pipeline +
+secrets/vars setup: [`infra/docs/playbooks/cd-setup.md`](infra/docs/playbooks/cd-setup.md).
 
 ### One triage request (the runtime data plane)
 
 An analyst's prompt enters the CUSTOM_JWT runtime; the agent loads memory, queries Snowflake
 as the user (OBO) for orders and on its own identity (SigV4) for customers/credit, screens
 model turns through the guardrail, retrieves KB policy, and may flag an order — every Gateway
-call Cedar-authorized:
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor A as Analyst
-    participant RT as AgentCore Runtime (Strands)
-    participant M as Nova Lite (Bedrock)
-    participant G as Bedrock Guardrail
-    participant MEM as AgentCore Memory
-    participant KB as Knowledge Base (S3 Vectors)
-    participant GW as Gateway + Cedar Policy
-    participant SAP as SAP credit Lambda
-    participant ORD as order-actions Lambda
-    participant SF as Snowflake-query Lambda
-
-    A->>RT: InvokeAgentRuntime (prompt = Triage order O-1003)
-    RT->>MEM: load prior session context
-    RT->>GW: snowflake___ask("orders to triage for O-1003's customer")
-    GW->>GW: Cedar authorize (principal = Entra OAuthUser)
-    GW->>SF: POST /ask (Entra OBO Bearer)
-    SF->>SF: OBO Bearer (OAUTH) → Cortex Analyst (NL→SQL over ORDERS_SV) → run SQL on SQL API
-    SF-->>RT: rows (as the user — RLS by region)
-    loop agent reasoning loop
-        RT->>G: ApplyGuardrail (PROMPT_ATTACK screen on input)
-        G-->>RT: pass / blocked
-        RT->>M: ConverseStream (prompt + tools + context)
-        M-->>RT: next tool-call decision
-        alt credit check
-            RT->>GW: sap___getCreditStatus(customer)
-            GW->>GW: Cedar authorize (principal = Entra OAuthUser)
-            GW->>SAP: GET /credit-status (SigV4 · gateway IAM role)
-            SAP-->>RT: on_hold / available_credit
-        else policy guidance
-            RT->>KB: Retrieve(high-value review policy)
-            KB-->>RT: policy passages
-        else flag order
-            RT->>GW: orders___flagOrder(order)
-            GW->>GW: Cedar authorize
-            GW->>ORD: POST /orders/{id}/flag (SigV4 · gateway IAM role)
-            ORD-->>RT: flagged = true
-        end
-    end
-    RT->>MEM: persist facts / summary
-    RT-->>A: streamed triage result (text/event-stream)
-    Note over RT: emits per-turn token EMF metric + gen_ai spans (X-Ray)
-```
+call Cedar-authorized. The full step-by-step sequence — the SigV4-vs-OBO egress split, the
+guardrail screen, and the per-turn telemetry — is in
+[`infra/docs/architecture/data-plane.md`](infra/docs/architecture/data-plane.md).
 
 ### Per-component diagrams
 
-- **Agent internals + ontology routing** — [`agent/README.md`](agent/README.md#architecture--visualizations)
-- **Stubs runtime + build/deploy** — [`stubs/README.md`](stubs/README.md#architecture--visualizations)
-- **Know-how stack (KB → Skills → Ontology) + feedback loop** — [`knowledge/README.md`](knowledge/README.md#architecture--visualizations)
-- **OBO sign-in flow (User A vs User B)** — [`app/README.md`](app/README.md#architecture--visualizations)
+- **Agent internals + ontology routing** — [`agent/docs/architecture.md`](agent/docs/architecture.md)
+- **Stubs runtime + build/deploy** — [`stubs/README.md`](stubs/README.md#architecture) + [`stubs/docs/build-and-deploy.md`](stubs/docs/build-and-deploy.md)
+- **Know-how stack (KB → Skills → Ontology) + feedback loop** — [`knowledge/README.md`](knowledge/README.md#architecture)
+- **OBO sign-in flow (User A vs User B)** — [`app/README.md`](app/README.md#architecture)
 
 ## Key journeys
 

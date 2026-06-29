@@ -197,3 +197,56 @@ Runtime also emits a per-turn **token-usage EMF metric** (`OrderTriage/Agent`), 
 data-protection PII mask. These feed the dashboards, alarms, SLOs and Contributor-Insights
 rules. Per-trace **AgentCore Online Evaluations** (LLM-judge) is wired in IaC but
 opt-in (`enable_online_evaluations`, default off) and is omitted here for clarity.
+
+## One triage request (sequence)
+
+The same flow as a step-by-step sequence — an analyst's prompt enters the
+CUSTOM_JWT runtime; the agent loads memory, queries Snowflake as the user (OBO) for
+orders and on its own identity (SigV4) for customers/credit, screens model turns through
+the guardrail, retrieves KB policy, and may flag an order — every Gateway call Cedar-authorized:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor A as Analyst
+    participant RT as AgentCore Runtime (Strands)
+    participant M as Nova Lite (Bedrock)
+    participant G as Bedrock Guardrail
+    participant MEM as AgentCore Memory
+    participant KB as Knowledge Base (S3 Vectors)
+    participant GW as Gateway + Cedar Policy
+    participant SAP as SAP credit Lambda
+    participant ORD as order-actions Lambda
+    participant SF as Snowflake-query Lambda
+
+    A->>RT: InvokeAgentRuntime (prompt = Triage order O-1003)
+    RT->>MEM: load prior session context
+    RT->>GW: snowflake___ask("orders to triage for O-1003's customer")
+    GW->>GW: Cedar authorize (principal = Entra OAuthUser)
+    GW->>SF: POST /ask (Entra OBO Bearer)
+    SF->>SF: OBO Bearer (OAUTH) → Cortex Analyst (NL→SQL over ORDERS_SV) → run SQL on SQL API
+    SF-->>RT: rows (as the user — RLS by region)
+    loop agent reasoning loop
+        RT->>G: ApplyGuardrail (PROMPT_ATTACK screen on input)
+        G-->>RT: pass / blocked
+        RT->>M: ConverseStream (prompt + tools + context)
+        M-->>RT: next tool-call decision
+        alt credit check
+            RT->>GW: sap___getCreditStatus(customer)
+            GW->>GW: Cedar authorize (principal = Entra OAuthUser)
+            GW->>SAP: GET /credit-status (SigV4 · gateway IAM role)
+            SAP-->>RT: on_hold / available_credit
+        else policy guidance
+            RT->>KB: Retrieve(high-value review policy)
+            KB-->>RT: policy passages
+        else flag order
+            RT->>GW: orders___flagOrder(order)
+            GW->>GW: Cedar authorize
+            GW->>ORD: POST /orders/{id}/flag (SigV4 · gateway IAM role)
+            ORD-->>RT: flagged = true
+        end
+    end
+    RT->>MEM: persist facts / summary
+    RT-->>A: streamed triage result (text/event-stream)
+    Note over RT: emits per-turn token EMF metric + gen_ai spans (X-Ray)
+```

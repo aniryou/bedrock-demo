@@ -3,9 +3,10 @@
 Working brief for the **order-triage agent** — it OWNS its assembly and composes the shared
 **`agent_kit`** toolkit (`../lib`): it constructs its own `BedrockModel` (with its guardrail/
 model config), wires the AgentCore Runtime entrypoint, and calls lib helpers for the
-agent-agnostic plumbing (prompt, identity, Gateway, memory, metrics, knowledge loaders). See
-`README.md` for full architecture diagrams and the six-folder mono-repo layout; this file is
-the orientation an agent needs to work in the code.
+agent-agnostic plumbing (prompt, identity, Gateway, memory, metrics, knowledge loaders). The
+`README.md` keeps the one conceptual diagram; `docs/architecture.md` holds the detailed
+architecture diagrams (data flow, ontology routing, build & deploy). This file is the
+orientation an agent needs to work in the code.
 
 ## Commands
 
