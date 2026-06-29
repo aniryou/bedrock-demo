@@ -20,6 +20,24 @@ pipeline components plus the shared lib) — see [The components](../README.md#t
 for the full map and hand-offs.
 The OBO sign-in client and demo driver: it takes an Entra user JWT and calls the deployed OBO runtime that the [infra](../infra/README.md) stack produces, so the agent impersonates the signed-in user and Snowflake RBAC/RLS decides what they see.
 
+## See it in action
+
+The whole demo is one screen. The analyst types a plain-English request — here,
+*"Triage all orders"* — and hits **Send**:
+
+![The chat box with a natural-language request typed in](images/01%20-%20user%20query.png)
+
+The agent then works the request **live**, streaming its reasoning back as it goes. You watch
+it think, write a Snowflake query (run *as the signed-in user*, so row-level security applies),
+call the back-office tools, and build up the triage — each step shown as an entry in the
+timeline rather than arriving as one opaque answer:
+
+![The agent's live reasoning timeline — a thinking step, a Snowflake SQL query, and tool calls](images/02%20-%20agent%20thinking.png)
+
+That live timeline is the point of the demo: ask the same thing signed in as a different user
+and the agent takes a visibly different path, because it reads orders on *that* user's behalf
+(the two-user contrast is spelled out in [What it demonstrates](#what-it-demonstrates-two-test-users)).
+
 ## Getting started
 
 **Prerequisites**
