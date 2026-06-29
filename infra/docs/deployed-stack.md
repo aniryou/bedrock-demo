@@ -242,31 +242,31 @@ set and confirmed.) App Signals **SLOs** track the same health as service-level 
 
 ## 8 · Entra — the OBO app registrations
 
-The `CUSTOM_JWT` inbound authorizer (plane 2) and the on-behalf-of token-exchange (planes 2 and
-5) both trust a **Microsoft Entra** tenant. None of this is built by the main `terraform apply`
-— it's a separate concern, provisioned by [`infra/entra/`](../entra/) (the `azuread` provider,
-its own local state) or `make entra-setup` (the az-CLI equivalent).
+The gateway's inbound auth (plane 2) and the on-behalf-of token exchange both trust a
+**Microsoft Entra** tenant. None of this is built by the main `terraform apply` — it's a separate
+concern, set up either as Terraform in [`infra/entra/`](../entra/) or with `make entra-setup`
+(the az-CLI equivalent).
 
-OBO is a classic **three-app middle-tier** topology, and that's exactly what's registered:
-`order-triage-snowflake` (the *resource* app standing in for Snowflake — it exposes the OBO
-scope and holds no secret), `order-triage-agent` (the *middle-tier client* that carries a
-secret and performs the token exchange), and `order-triage-graph-resolver` (an app-only daemon
-that resolves an Entra object-id → display name for the dashboards,
+OBO follows the classic **three-app, middle-tier** pattern, and that's what's registered here.
+One app, `order-triage-snowflake`, is the *resource* — it stands in for Snowflake and holds no
+secret of its own. A second, `order-triage-agent`, is the *middle-tier client*: it carries a
+secret and does the actual token exchange. The third, `order-triage-graph-resolver`, is a small
+daemon that turns an Entra user-id back into a display name for the dashboards (see
 [ADR-0007](adr/0007-actor-resolution.md)).
 
 ![Entra app registrations — the three order-triage apps: snowflake (resource), agent (client + secret), graph-resolver (daemon)](images/25%20-%20entra%20-%20app-registrations.png)
 
-The agent app's **API permissions** are the heart of the exchange: two *delegated* grants —
-Microsoft Graph `User.Read` and the Snowflake resource app's `session:role-any` scope — both
-**admin-consented** ("Granted for Default Directory"). With these, the agent can swap the
-inbound user token for a Snowflake token that carries *the user's* role.
+The agent app's **API permissions** are where the exchange is authorized. It holds two delegated
+permissions — Microsoft Graph's `User.Read` and the Snowflake app's `session:role-any` scope —
+and both are already admin-consented (the green "Granted for Default Directory"). That consent is
+what lets the agent trade a user's sign-in token for a Snowflake token carrying *that user's* role.
 
 ![Entra agent-app API permissions — delegated Graph User.Read and the snowflake session:role-any scope, both admin-consented](images/26%20-%20entra%20-%20api-permissions.png)
 
-The other side of that grant is the resource app's **Expose an API**: a single delegated scope,
-`session:role-any` (admins-only consent, enabled), published under the `api://…` Application ID
-URI. `session:role-any` is the Snowflake "role-any" carrier — one of the OBO traps the runbook
-calls out (v1 tokens, the scope carrier, the user-mapping claim) — so the exact value matters.
+The matching half lives on the resource app, under **Expose an API**. It publishes a single
+scope, `session:role-any`, with admin-only consent, under an `api://` URI. The exact name
+matters — `session:role-any` is the carrier Snowflake expects — and getting it wrong is one of
+the classic OBO traps the runbook warns about.
 
 ![Entra resource-app Expose an API — the api:// Application ID URI and the exposed session:role-any delegated scope](images/27%20-%20entra%20-%20expose-api.png)
 
@@ -279,53 +279,52 @@ the agent∩user split: [ADR-0001](adr/0001-user-impersonation-obo.md).
 
 ## 9 · Snowflake — tables, RLS, and the semantic view
 
-The OBO read lands in **Snowflake**, where the impersonated user first has to *become* a
-Snowflake user, and then row security decides what they see. None of this is in the main
-`terraform apply` — it's seeded by `make snowflake-setup`, `make snowflake-obo` (the OAuth
-trust), and `make apply-sql` from the SQL in [`infra/snowflake/`](../snowflake/).
+The OBO read finally lands in **Snowflake**. Before row security can do anything, though, the
+impersonated user has to *become* a Snowflake user — so that's where this section starts. As with
+Entra, none of it comes from the main `terraform apply`: it's seeded with `make snowflake-setup`,
+`make snowflake-obo`, and `make apply-sql` from the SQL in [`infra/snowflake/`](../snowflake/).
 
-**The Snowflake side of OBO** is an `EXTERNAL_OAUTH` security integration, `ENTRA_OBO`, that
-validates the inbound Entra token and maps it to a Snowflake user: the token's `upn`/`email`
-claim is matched against each user's `login_name`, so `CURRENT_USER()` resolves to the *human*
-(e.g. `ANIL_ENTRA`) rather than the agent. Two details carry the design. The issuer is the
-**v1** STS endpoint (`https://sts.windows.net/…`) — Entra must mint **v1** tokens here, because
-Snowflake's `AZURE` external-OAuth silently rejects v2 (the headline OBO trap). And
-`ANY_ROLE_MODE = ENABLE` lets the token carry the `session:role-any` scope from plane 8;
-privileged roles (`ACCOUNTADMIN`/`ORGADMIN`/`SECURITYADMIN`) are blocked from OAuth sign-in.
+The Snowflake side of OBO is an external-OAuth **security integration** called `ENTRA_OBO`. It
+checks the incoming Entra token and matches it to a Snowflake user — reading the email from the
+token and finding the user whose login name matches. The effect is that `CURRENT_USER()` becomes
+the actual person (say, `ANIL_ENTRA`) instead of the agent's service account.
+
+Two of its settings are worth calling out. The **issuer** is `sts.windows.net`, the *v1* token
+endpoint — Snowflake's Azure connector only accepts v1 tokens and quietly rejects v2, which is a
+favourite OBO trap. And **any-role mode** is on, so the user's token can carry the
+`session:role-any` scope from plane 8. Privileged roles such as `ACCOUNTADMIN` are blocked from
+signing in this way at all.
 
 ![Snowflake EXTERNAL_OAUTH security integration ENTRA_OBO — v1 sts.windows.net issuer, upn/email → login_name user mapping, any-role enabled, privileged roles blocked](images/28%20-%20snowflake%20-%20security-integration.png)
 
-With identity settled, the data. The schema is small: `ORDER_TRIAGE_DB.PUBLIC` holds three
-tables — `ORDERS` (the orders to triage), `CUSTOMERS` (account master data), and
-`USER_REGION_ACCESS` (the per-user region entitlements that drive row security). Here are the
-twelve demo orders, spread across regions.
+With identity settled, the data is simple. The `ORDER_TRIAGE_DB.PUBLIC` schema has three tables:
+`ORDERS` (the orders to triage), `CUSTOMERS` (the account master data), and `USER_REGION_ACCESS`
+(which user is allowed to see which region). Below are the twelve demo orders.
 
 ![Snowflake tables — the ORDER_TRIAGE_DB.PUBLIC schema (orders, customers, user_region_access) and the 12 demo orders](images/29%20-%20snowflake%20-%20tables.png)
 
-**Row-level security** is a row access policy, `orders_region_rap`, attached to `ORDERS`. Its
-body is the whole multi-user story: the agent's own service identity (`SVC_ORDER_TRIAGE`) sees
-*every* region, while any *impersonated* human sees only the regions listed for them in
-`USER_REGION_ACCESS`. Because the policy sits on the base table, every read through the gateway
-— whether on the agent's authority or a user's via OBO — is scoped by construction.
+**Row-level security** is one row-access policy, `orders_region_rap`, on the `ORDERS` table. The
+rule reads plainly: the agent's own service account sees every region, while an impersonated
+person sees only the regions listed for them in `USER_REGION_ACCESS`. Because it sits on the base
+table, it applies to *every* read — whether the agent is acting for itself or for a user.
 
 ![Snowflake row access policy orders_region_rap — service identity sees all regions; impersonated users see only their entitled region(s)](images/30%20-%20snowflake%20-%20rls.png)
 
-Finally, the **semantic view** `ORDERS_SV` is the model **Cortex Analyst** reads to turn the
-agent's single natural-language `/ask` (plane 2) into governed SQL: logical tables (`orders`,
-`customers`) and their relationship, facts, dimensions with natural-language synonyms, and
-metrics. The row access policy still applies at the base table, so questions answered through
-the view are per-user too.
+Last is the **semantic view**, `ORDERS_SV` — the model **Cortex Analyst** reads to turn the
+agent's plain-language `/ask` (plane 2) into real SQL. It spells out the tables, how they join,
+and the dimensions and metrics to group by, each with everyday synonyms. The row-access policy
+still applies underneath, so answers that come back through the view are scoped per user just the
+same.
 
 ![Snowflake semantic view ORDERS_SV — logical tables, relationship, facts, dimensions with synonyms, and metrics](images/31%20-%20snowflake%20-%20semantic-view.png)
 
 **Provisioned by:** the SQL in [`infra/snowflake/`](../snowflake/) —
-[`setup.sql`](../snowflake/setup.sql) (schema + seed data + read-only role + key-pair service
-user), [`rls.sql`](../snowflake/rls.sql) (the row access policy + entitlements), and
-[`semantic_view.sql`](../snowflake/semantic_view.sql) (`ORDERS_SV`) — plus the `ENTRA_OBO`
-external-OAuth integration (`make snowflake-obo`, templated from the Entra IDs, so not a checked-in
-`.sql`). The semantic-view decision: [ADR-0008](adr/0008-semantic-view-cortex-analyst.md); the OBO
-trust and its v1/user-mapping traps: the [Entra OBO runbook](playbooks/entra-obo-setup.md); the
-seeding steps: the [Snowflake bootstrap runbook](playbooks/snowflake-bootstrap.md).
+[`setup.sql`](../snowflake/setup.sql) (schema, seed data, and the read-only role),
+[`rls.sql`](../snowflake/rls.sql) (the policy and its entitlements), and
+[`semantic_view.sql`](../snowflake/semantic_view.sql) (`ORDERS_SV`). The `ENTRA_OBO` integration
+itself is created by `make snowflake-obo`, templated from the Entra IDs rather than checked in.
+For the reasoning, see [ADR-0008](adr/0008-semantic-view-cortex-analyst.md) on the semantic view
+and the [Entra OBO runbook](playbooks/entra-obo-setup.md) on the token trust.
 
 ---
 
