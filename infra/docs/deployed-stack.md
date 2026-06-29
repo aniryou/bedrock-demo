@@ -7,9 +7,11 @@ plane in the order a request flows through it, with a link to the Terraform that
 piece so you can jump from "what it looks like" to "what built it".
 
 > Screenshots are from a live deploy (region **us-west-2**, model **Nova Lite**); account IDs,
-> ARNs, and tenant IDs are redacted. Everything below is created by `terraform apply` from
-> [`infra/terraform/`](../terraform/) — see the [deploy runbook](playbooks/deploy.md) to stand it
-> up yourself.
+> ARNs, client/tenant IDs, and the `api://` URIs are redacted. **Planes 1–7** are created by
+> `terraform apply` from [`infra/terraform/`](../terraform/) — see the
+> [deploy runbook](playbooks/deploy.md) to stand it up yourself. **Sections 8–9** cover the two
+> systems the stack *federates with* — the Entra tenant and the Snowflake account — which are
+> provisioned on their own paths (noted in each).
 
 **The tour, plane by plane:**
 
@@ -20,6 +22,11 @@ piece so you can jump from "what it looks like" to "what built it".
 5. [Identity](#5--identity--how-the-agent-proves-who-its-acting-as) — how the agent proves who it's acting as
 6. [Guardrail](#6--guardrail--the-prompt-attack-screen) — the prompt-attack screen
 7. [Observability](#7--observability--watching-it-run) — watching it run
+
+…and the two systems it federates with (provisioned outside the AWS stack):
+
+8. [Entra](#8--entra--the-obo-app-registrations) — the OBO identity provider
+9. [Snowflake](#9--snowflake--tables-rls-and-the-semantic-view) — the OBO trust, tables, RLS, semantic view
 
 ---
 
@@ -209,11 +216,11 @@ model invocation, plus guardrail interventions, **Cedar authorization decisions 
 **OBO token-exchange success vs failure** — exactly the trail you'd want when asked "who saw what,
 and was it allowed?"
 
-![order-triage-governance dashboard, part 1 — the per-turn append-only model-invocation record (PII masked) and guardrail interventions](images/22%20-%20observability%20-%20dashboard%20-%20governance%20-%201.png)
+![order-triage-governance dashboard, part 1 — the per-turn append-only model-invocation record (PII masked) and guardrail interventions](images/21%20-%20observability%20-%20dashboard%20-%20governance%20-%201.png)
 
 ![order-triage-governance dashboard, part 2 — Cedar authorization decisions by tool and OBO token-exchange success vs failure](images/22%20-%20observability%20-%20dashboard%20-%20governance%20-%202.png)
 
-![order-triage-governance dashboard, part 3 — Cedar decisions by policy engine, OBO failures by type, and Knowledge Base access latency](images/22%20-%20observability%20-%20dashboard%20-%20governance%20-%203.png)
+![order-triage-governance dashboard, part 3 — Cedar decisions by policy engine, OBO failures by type, and Knowledge Base access latency](images/23%20-%20observability%20-%20dashboard%20-%20governance%20-%203.png)
 
 ### Alarms and SLOs
 
@@ -222,7 +229,7 @@ agent-unhealthy, OBO token-exchange failures, token-usage anomalies, and service
 notify via SNS when something crosses a threshold. (They only page someone once `alert_email` is
 set and confirmed.) App Signals **SLOs** track the same health as service-level objectives.
 
-![CloudWatch alarms — the seven order-triage alarms, all OK](images/21%20-%20observability%20-%20slo.png)
+![CloudWatch alarms — the seven order-triage alarms, all OK](images/24%20-%20observability%20-%20slo.png)
 
 **Terraform:** [`observability.tf`](../terraform/observability.tf) wires in the
 [`modules/observability/`](../terraform/modules/observability/) module — the dashboards
@@ -230,6 +237,95 @@ set and confirmed.) App Signals **SLOs** track the same health as service-level 
 ([`alarms.tf`](../terraform/modules/observability/alarms.tf)), and SLOs
 ([`slo.tf`](../terraform/modules/observability/slo.tf)). The design and FinOps rationale:
 [ADR-0004](adr/0004-observability-finops.md).
+
+---
+
+## 8 · Entra — the OBO app registrations
+
+The `CUSTOM_JWT` inbound authorizer (plane 2) and the on-behalf-of token-exchange (planes 2 and
+5) both trust a **Microsoft Entra** tenant. None of this is built by the main `terraform apply`
+— it's a separate concern, provisioned by [`infra/entra/`](../entra/) (the `azuread` provider,
+its own local state) or `make entra-setup` (the az-CLI equivalent).
+
+OBO is a classic **three-app middle-tier** topology, and that's exactly what's registered:
+`order-triage-snowflake` (the *resource* app standing in for Snowflake — it exposes the OBO
+scope and holds no secret), `order-triage-agent` (the *middle-tier client* that carries a
+secret and performs the token exchange), and `order-triage-graph-resolver` (an app-only daemon
+that resolves an Entra object-id → display name for the dashboards,
+[ADR-0007](adr/0007-actor-resolution.md)).
+
+![Entra app registrations — the three order-triage apps: snowflake (resource), agent (client + secret), graph-resolver (daemon)](images/25%20-%20entra%20-%20app-registrations.png)
+
+The agent app's **API permissions** are the heart of the exchange: two *delegated* grants —
+Microsoft Graph `User.Read` and the Snowflake resource app's `session:role-any` scope — both
+**admin-consented** ("Granted for Default Directory"). With these, the agent can swap the
+inbound user token for a Snowflake token that carries *the user's* role.
+
+![Entra agent-app API permissions — delegated Graph User.Read and the snowflake session:role-any scope, both admin-consented](images/26%20-%20entra%20-%20api-permissions.png)
+
+The other side of that grant is the resource app's **Expose an API**: a single delegated scope,
+`session:role-any` (admins-only consent, enabled), published under the `api://…` Application ID
+URI. `session:role-any` is the Snowflake "role-any" carrier — one of the OBO traps the runbook
+calls out (v1 tokens, the scope carrier, the user-mapping claim) — so the exact value matters.
+
+![Entra resource-app Expose an API — the api:// Application ID URI and the exposed session:role-any delegated scope](images/27%20-%20entra%20-%20expose-api.png)
+
+**Provisioned by:** [`infra/entra/main.tf`](../entra/main.tf) — the three app registrations, the
+exposed scope, v1 tokens, pre-authorization, the client secret, and admin consent. The full
+wiring and its traps: the [Entra OBO runbook](playbooks/entra-obo-setup.md); the design behind
+the agent∩user split: [ADR-0001](adr/0001-user-impersonation-obo.md).
+
+---
+
+## 9 · Snowflake — tables, RLS, and the semantic view
+
+The OBO read lands in **Snowflake**, where the impersonated user first has to *become* a
+Snowflake user, and then row security decides what they see. None of this is in the main
+`terraform apply` — it's seeded by `make snowflake-setup`, `make snowflake-obo` (the OAuth
+trust), and `make apply-sql` from the SQL in [`infra/snowflake/`](../snowflake/).
+
+**The Snowflake side of OBO** is an `EXTERNAL_OAUTH` security integration, `ENTRA_OBO`, that
+validates the inbound Entra token and maps it to a Snowflake user: the token's `upn`/`email`
+claim is matched against each user's `login_name`, so `CURRENT_USER()` resolves to the *human*
+(e.g. `ANIL_ENTRA`) rather than the agent. Two details carry the design. The issuer is the
+**v1** STS endpoint (`https://sts.windows.net/…`) — Entra must mint **v1** tokens here, because
+Snowflake's `AZURE` external-OAuth silently rejects v2 (the headline OBO trap). And
+`ANY_ROLE_MODE = ENABLE` lets the token carry the `session:role-any` scope from plane 8;
+privileged roles (`ACCOUNTADMIN`/`ORGADMIN`/`SECURITYADMIN`) are blocked from OAuth sign-in.
+
+![Snowflake EXTERNAL_OAUTH security integration ENTRA_OBO — v1 sts.windows.net issuer, upn/email → login_name user mapping, any-role enabled, privileged roles blocked](images/28%20-%20snowflake%20-%20security-integration.png)
+
+With identity settled, the data. The schema is small: `ORDER_TRIAGE_DB.PUBLIC` holds three
+tables — `ORDERS` (the orders to triage), `CUSTOMERS` (account master data), and
+`USER_REGION_ACCESS` (the per-user region entitlements that drive row security). Here are the
+twelve demo orders, spread across regions.
+
+![Snowflake tables — the ORDER_TRIAGE_DB.PUBLIC schema (orders, customers, user_region_access) and the 12 demo orders](images/29%20-%20snowflake%20-%20tables.png)
+
+**Row-level security** is a row access policy, `orders_region_rap`, attached to `ORDERS`. Its
+body is the whole multi-user story: the agent's own service identity (`SVC_ORDER_TRIAGE`) sees
+*every* region, while any *impersonated* human sees only the regions listed for them in
+`USER_REGION_ACCESS`. Because the policy sits on the base table, every read through the gateway
+— whether on the agent's authority or a user's via OBO — is scoped by construction.
+
+![Snowflake row access policy orders_region_rap — service identity sees all regions; impersonated users see only their entitled region(s)](images/30%20-%20snowflake%20-%20rls.png)
+
+Finally, the **semantic view** `ORDERS_SV` is the model **Cortex Analyst** reads to turn the
+agent's single natural-language `/ask` (plane 2) into governed SQL: logical tables (`orders`,
+`customers`) and their relationship, facts, dimensions with natural-language synonyms, and
+metrics. The row access policy still applies at the base table, so questions answered through
+the view are per-user too.
+
+![Snowflake semantic view ORDERS_SV — logical tables, relationship, facts, dimensions with synonyms, and metrics](images/31%20-%20snowflake%20-%20semantic-view.png)
+
+**Provisioned by:** the SQL in [`infra/snowflake/`](../snowflake/) —
+[`setup.sql`](../snowflake/setup.sql) (schema + seed data + read-only role + key-pair service
+user), [`rls.sql`](../snowflake/rls.sql) (the row access policy + entitlements), and
+[`semantic_view.sql`](../snowflake/semantic_view.sql) (`ORDERS_SV`) — plus the `ENTRA_OBO`
+external-OAuth integration (`make snowflake-obo`, templated from the Entra IDs, so not a checked-in
+`.sql`). The semantic-view decision: [ADR-0008](adr/0008-semantic-view-cortex-analyst.md); the OBO
+trust and its v1/user-mapping traps: the [Entra OBO runbook](playbooks/entra-obo-setup.md); the
+seeding steps: the [Snowflake bootstrap runbook](playbooks/snowflake-bootstrap.md).
 
 ---
 
