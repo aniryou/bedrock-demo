@@ -1,7 +1,8 @@
 # CLAUDE.md
 
-Guidance for working in this repo. See [README.md](README.md) for the full
-architecture diagrams.
+Guidance for working in this repo. Runtime architecture diagram in
+[README.md](README.md); the build/deploy diagram in
+[docs/build-and-deploy.md](docs/build-and-deploy.md).
 
 ## What this is
 
