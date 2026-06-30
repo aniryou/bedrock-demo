@@ -38,7 +38,8 @@ resource "aws_iam_role_policy" "snowflake_lambda_secrets" {
   })
 }
 
-# --- The Lambda + public Function URL (gated by the X-API-Key the Gateway injects)
+# --- The Lambda + public (AuthType=NONE) Function URL — the Gateway reaches it with a per-user
+# --- Entra OBO bearer (OAUTH TOKEN_EXCHANGE), set by snowflake_obo_egress below.
 data "aws_s3_object" "snowflake_zip" {
   bucket = var.artifacts_bucket
   key    = "stubs/snowflake.zip"
@@ -58,7 +59,6 @@ resource "aws_lambda_function" "snowflake" {
   environment {
     variables = {
       SNOWFLAKE_SECRET_NAME = var.snowflake_secret_name
-      SNOWFLAKE_API_KEY     = var.snowflake_api_key # distinct from the SAP/orders stub key
     }
   }
 }
