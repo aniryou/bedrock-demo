@@ -53,12 +53,13 @@ authorizer that only accepts tokens minted by the demo's Microsoft Entra tenant,
 **policy engine is set to *enforce*** — so no tool call happens without an authorization
 decision (that's plane 3).
 
-![Gateway console — order-triage-gateway details, the interceptor Lambdas, the associated policy engine, and the Entra inbound-auth block](images/02%20-%20gateway.png)
+![Gateway console — order-triage-gateway details: the resource ARN, enforcement mode enabled, the associated policy engine, and the gateway IAM role](images/02%20-%20gateway.png)
 
-Behind the gateway sit three **targets** — `orders`, `sap`, and `snowflake` — each a back-office
-stub published as an OpenAPI schema. This is the list of tools the agent can reach.
+Behind the gateway sit three **targets** — `orders`, `sap`, and `snowflake` — the back-office
+services the agent can reach. Orders and SAP are wired as native Lambda targets; Snowflake is an
+OpenAPI target (its on-behalf-of read is the next section).
 
-![Gateway inbound-auth detail and the three targets: orders, sap, snowflake — all MCP / OpenAPI](images/03%20-%20gateway%20-%20auth.png)
+![Gateway inbound-auth detail and the three targets — orders and sap as native Lambda targets, snowflake as an OpenAPI target, all over MCP](images/03%20-%20gateway%20-%20auth.png)
 
 **Terraform:** [`gateway.tf`](../terraform/gateway.tf) — the gateway, its inbound `CUSTOM_JWT`
 authorizer, and the three targets. The backends themselves are
@@ -225,9 +226,9 @@ and was it allowed?"
 
 ![order-triage-governance dashboard, part 1 — the per-turn append-only model-invocation record (PII masked, actor column resolved to display names) and guardrail interventions](images/21%20-%20observability%20-%20dashboard%20-%20governance%20-%201.png)
 
-![order-triage-governance dashboard, part 2 — Cedar authorization decisions by tool and OBO token-exchange success vs failure](images/22%20-%20observability%20-%20dashboard%20-%20governance%20-%202.png)
+![order-triage-governance dashboard, part 2 — Cedar authorization decisions, by tool and by policy engine](images/22%20-%20observability%20-%20dashboard%20-%20governance%20-%202.png)
 
-![order-triage-governance dashboard, part 3 — Cedar decisions by policy engine, OBO failures by type, and Knowledge Base access latency](images/23%20-%20observability%20-%20dashboard%20-%20governance%20-%203.png)
+![order-triage-governance dashboard, part 3 — OBO token-exchange success vs failure, OBO failures by exception type, and Knowledge Base access latency](images/23%20-%20observability%20-%20dashboard%20-%20governance%20-%203.png)
 
 ### Alarms and SLOs
 
