@@ -18,14 +18,6 @@ output "gateway_url" {
   description = "Set as GATEWAY_URL to call the stubs through the Gateway."
 }
 
-output "sap_function_url" {
-  value = aws_lambda_function_url.sap.function_url
-}
-
-output "order_actions_function_url" {
-  value = aws_lambda_function_url.order_actions.function_url
-}
-
 output "agent_runtime_arn" {
   value = aws_bedrockagentcore_agent_runtime.this.agent_runtime_arn
 }

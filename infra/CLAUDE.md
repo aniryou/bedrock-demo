@@ -102,5 +102,5 @@ CI/CD (auto-publish cascade + human-gated apply) is documented in `docs/playbook
 
 ## Pointers
 - System diagram + deploy pipeline: `README.md`. Detailed runtime data plane: `docs/architecture/data-plane.md`.
-- Decisions: `docs/adr/0001`(OBO) · `0002`(memory) · `0003`(guardrail) · `0004`(observability/FinOps) · `0005`(evaluations) · `0006`(gateway-role least-privilege) · `0007`(actor-resolution) · `0008`(semantic-view + Cortex Analyst) · `0009`(snowflake Function URL direct-call hardening — deferred).
+- Decisions: `docs/adr/0001`(OBO) · `0002`(memory) · `0003`(guardrail) · `0004`(observability/FinOps) · `0005`(evaluations) · `0006`(gateway-role least-privilege) · `0007`(actor-resolution) · `0008`(semantic-view + Cortex Analyst) · `0009`(snowflake Function URL direct-call hardening — deferred) · `0010`(sap/orders native Lambda targets — proposed, supersedes 0006 D1).
 - Runbooks (`docs/playbooks/`): Snowflake seed `snowflake-bootstrap.md` · deploy/teardown `deploy.md` · OBO `entra-obo-setup.md` · CI/CD `cd-setup.md` · observability `observability-impl-plan.md`. Spikes/audits: `docs/research/`. Entra apps as TF: `entra/README.md`.
