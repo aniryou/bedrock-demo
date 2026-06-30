@@ -178,12 +178,12 @@ variable "enable_online_evaluations" {
 
 variable "enable_actor_resolution" {
   type        = bool
-  default     = false
-  description = "Resolve the FinOps 'Top actors' Entra oid to a display name via a Graph-backed custom-widget Lambda (ADR-0007). Needs the entra/ graph_resolver app + graph_resolver_secret_name + the agent emitting actor_oid."
+  default     = true
+  description = "Resolve the FinOps 'Top actors' leaderboard and the Governance audit actor column from the Entra oid to a display name via a Graph-backed custom-widget Lambda (ADR-0007). On by default (internal-user demo). Needs the entra/ graph_resolver app + graph_resolver_secret_name + the agent emitting actor_oid. Set false to keep the opaque-id widgets."
 }
 
 variable "graph_resolver_secret_name" {
   type        = string
-  default     = ""
-  description = "Secrets Manager secret holding the Graph app creds JSON {tenant_id, client_id, client_secret} for actor resolution. Seed via `make seed-graph-secret`. Required when enable_actor_resolution = true."
+  default     = "order-triage-graph-resolver"
+  description = "Secrets Manager secret holding the Graph app creds JSON {tenant_id, client_id, client_secret} for actor resolution. Seed via `make seed-graph-secret`. Required when enable_actor_resolution = true (the default)."
 }

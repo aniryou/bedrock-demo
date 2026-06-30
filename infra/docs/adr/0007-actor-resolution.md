@@ -5,6 +5,11 @@
 **Deciders:** repo owner
 **Related:** ADR-0001 (OBO / identity), ADR-0004 (observability/FinOps), the shared lib `agent_kit.infra.identity` + the agent's `runtime.py` entrypoint loop
 
+**Update (2026-06-30):** `enable_actor_resolution` now defaults to **true**. This demo serves
+internal users only, the Graph secret is pre-seeded, and resolution is render-time, so the opt-in
+friction added nothing. Set it `false` to revert to the opaque widgets. The PII posture below is
+**unchanged** — default-on affects only what the dashboards *render*, never what is stored.
+
 ## Context
 
 The FinOps "Top actors by tokens" leaderboard ranked the **opaque Entra `sub`** (e.g.
@@ -32,9 +37,9 @@ Resolve the actor to a display name **only at render time**, keeping every store
    name exists only in the Lambda's render path and the operator's browser.
 4. The FinOps "Top actors" widget becomes the custom widget (`leaderboard` mode, top-10). The
    Governance per-turn audit table likewise becomes a custom widget (`audit` mode: Logs Insights
-   over the model-invocation log + Graph), reading `requestMetadata.actor_oid`. **Opt-in** via
-   `enable_actor_resolution` (default false) — off keeps the native widgets and creates zero new
-   resources.
+   over the model-invocation log + Graph), reading `requestMetadata.actor_oid`. **On by default**
+   via `enable_actor_resolution` (default true, see Update) — off keeps the opaque native widgets
+   and creates zero new resources.
 
 ## Options considered
 
@@ -67,9 +72,10 @@ Resolve the actor to a display name **only at render time**, keeping every store
 
 - [x] Agent emits `actor_oid` (order-triage-agent#32).
 - [x] `actor_oid` rule + resolver Lambda + opt-in wiring (this change).
-- [ ] Operator: `make entra-tf` (creates `graph_resolver` + admin consent) → `make
-      seed-graph-secret` → set `enable_actor_resolution = true` + `graph_resolver_secret_name` →
-      `make deploy`. Verify the FinOps widget renders names after one live invoke.
+- [x] On by default (2026-06-30). For a **fresh** tenant the operator must still run `make
+      entra-tf` (creates `graph_resolver` + admin consent) → `make seed-graph-secret` before `make
+      deploy` so the Graph secret exists; the live stack's secret is already seeded. Verify the
+      FinOps + Governance widgets render names after one live invoke.
 - [x] Governance audit table's actor column resolved via the same Lambda (`audit` mode).
 
 ## References

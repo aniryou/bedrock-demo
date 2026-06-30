@@ -72,13 +72,14 @@ jobs:
       # variables; default off / empty when unset.
       TF_VAR_enable_online_evaluations: ${{ vars.ENABLE_ONLINE_EVALUATIONS || 'false' }}
       TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
-      # Dashboard actor resolution (ADR-0007) — same sync rule as the eval vars above. Without
-      # them a CI apply defaults resolution off (the var default is false) and TEARS DOWN the
-      # actor-resolver Lambda, role, Graph-secret data source, and oid contributor rule that
-      # `make deploy` stood up. Set as `production` environment variables; the secret name is the
-      # Secrets Manager secret seeded by `make seed-graph-secret`. Default off / empty when unset.
-      TF_VAR_enable_actor_resolution: ${{ vars.ENABLE_ACTOR_RESOLUTION || 'false' }}
-      TF_VAR_graph_resolver_secret_name: ${{ vars.GRAPH_RESOLVER_SECRET_NAME }}
+      # Dashboard actor resolution (ADR-0007) — on by default (internal-user demo). These TF_VARs
+      # are always set here, so they override the HCL default; keep the fallbacks ON so a CI apply
+      # matches `make deploy` and does not TEAR DOWN the actor-resolver Lambda, role, Graph-secret
+      # data source, and oid contributor rule. The secret name is the Secrets Manager secret seeded
+      # by `make seed-graph-secret`. Set the `production` env vars ENABLE_ACTOR_RESOLUTION /
+      # GRAPH_RESOLVER_SECRET_NAME to override (e.g. set ENABLE_ACTOR_RESOLUTION=false to turn off).
+      TF_VAR_enable_actor_resolution: ${{ vars.ENABLE_ACTOR_RESOLUTION || 'true' }}
+      TF_VAR_graph_resolver_secret_name: ${{ vars.GRAPH_RESOLVER_SECRET_NAME || 'order-triage-graph-resolver' }}
     steps:
       - uses: actions/checkout@v7
 

@@ -50,6 +50,10 @@ CI/CD (auto-publish cascade + human-gated apply) is documented in `docs/playbook
   no one** until set + the SNS email is confirmed.
 - **Online Evaluations are opt-in** (`enable_online_evaluations`, default false); scoring is
   currently blocked on `AgentSpanMappingException` — see ADR-0005.
+- **Actor resolution is on by default** (`enable_actor_resolution`, ADR-0007): the FinOps
+  'Top actors' + Governance audit columns resolve the Entra `oid` to a display name at render time
+  via the graph-resolver Lambda. Needs the `graph_resolver` Entra app + `make seed-graph-secret`
+  (the live secret is seeded); stored telemetry stays opaque. CI mirrors the default in `deploy.yml`.
 - **OBO is Gateway-brokered** (`grant_type=TOKEN_EXCHANGE` on the snowflake target); the agent
   carries no OBO code. Inbound is `CUSTOM_JWT` (Entra v1) on both Runtime and Gateway.
 - **ARNs are recreated each deploy** — read them from `terraform output` (or `make status`),
