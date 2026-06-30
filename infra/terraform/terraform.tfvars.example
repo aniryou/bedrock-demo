@@ -29,8 +29,8 @@ artifacts_bucket = "order-triage-artifacts-<ACCOUNT>"
 # guardrail_prompt_attack_strength      = "MEDIUM"   # LOW | MEDIUM | HIGH
 # alert_email                           = ""         # SNS alarm subscriber; empty = alarms notify no one
 # enable_online_evaluations             = false      # opt-in AgentCore online Evaluations (per-trace LLM judge)
-# enable_actor_resolution               = false      # opt-in: resolve the FinOps "Top actors" oid -> name via Graph (ADR-0007)
-# graph_resolver_secret_name            = ""         # SM secret {tenant_id,client_id,client_secret}; required when enable_actor_resolution = true
+# enable_actor_resolution               = true       # default on: resolve the FinOps "Top actors" + Governance audit oid -> name via Graph (ADR-0007); false = opaque widgets
+# graph_resolver_secret_name            = "order-triage-graph-resolver"  # SM secret {tenant_id,client_id,client_secret}; seed via `make seed-graph-secret`
 # model_input_usd_per_million           = 0.06       # FinOps dashboard estimate (Nova Lite)
 # model_output_usd_per_million          = 0.24       # FinOps dashboard estimate (Nova Lite)
 # trace_indexing_percentage             = 100        # X-Ray Transaction Search indexing rate
