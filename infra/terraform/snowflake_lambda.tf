@@ -39,7 +39,7 @@ resource "aws_iam_role_policy" "snowflake_lambda_secrets" {
 }
 
 # --- The Lambda + public (AuthType=NONE) Function URL — the Gateway reaches it with a per-user
-# --- Entra OBO bearer (OAUTH TOKEN_EXCHANGE), set by snowflake_obo_egress below; not an X-API-Key.
+# --- Entra OBO bearer (OAUTH TOKEN_EXCHANGE), set by snowflake_obo_egress below.
 data "aws_s3_object" "snowflake_zip" {
   bucket = var.artifacts_bucket
   key    = "stubs/snowflake.zip"
