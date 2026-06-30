@@ -14,9 +14,11 @@ name: Deploy to AgentCore (Terraform)
 # it never sees the deploy role. Approver list lives in infra/docs/playbooks/cd-setup.md / the step below.
 #
 # Auth via GitHub OIDC. Requires (see infra/docs/playbooks/cd-setup.md):
-#   secrets: AWS_DEPLOY_ROLE_ARN, ARTIFACTS_BUCKET, AGENT_IMAGE_URI (fallback image),
-#            SNOWFLAKE_API_KEY
-#   vars (production env): ENTRA_TENANT_ID, ENTRA_AGENT_APP_ID, ENTRA_OBO_SCOPE
+#   secrets: AWS_DEPLOY_ROLE_ARN, ARTIFACTS_BUCKET, SNOWFLAKE_API_KEY
+#            (AGENT_IMAGE_URI secret still honored as a last-resort fallback image)
+#   vars (production env): AGENT_IMAGE_URI (fallback image when a dispatch carries no image_uri,
+#            e.g. a stubs/infra-only deploy — set to the ECR repo :latest),
+#            ENTRA_TENANT_ID, ENTRA_AGENT_APP_ID, ENTRA_OBO_SCOPE
 #   vars:    AWS_REGION (optional; us-west-2), NAME_PREFIX (optional; order-triage),
 #            DEPLOY_APPROVERS (optional; comma-separated GitHub logins, default 'aniryou')
 # Runs infra.preflight (a read-only deploy-role access check) before the apply.
@@ -56,7 +58,11 @@ jobs:
       AWS_REGION: ${{ github.event.inputs.region || vars.AWS_REGION || 'us-west-2' }}
       NAME_PREFIX: ${{ vars.NAME_PREFIX || 'order-triage' }}
       TF_VAR_region: ${{ github.event.inputs.region || vars.AWS_REGION || 'us-west-2' }}
-      TF_VAR_agent_image_uri: ${{ github.event.client_payload.image_uri || secrets.AGENT_IMAGE_URI }}
+      # A dispatch from agent-build carries the freshly-built image. A stubs/infra-only deploy
+      # (stubs-published / workflow_dispatch) carries none, so fall back to the AGENT_IMAGE_URI
+      # production var (e.g. the ECR repo's :latest); the same-named secret is the last resort.
+      # Without a valid fallback the runtime update fails ECR validation on infra/stubs deploys.
+      TF_VAR_agent_image_uri: ${{ github.event.client_payload.image_uri || vars.AGENT_IMAGE_URI || secrets.AGENT_IMAGE_URI }}
       TF_VAR_artifacts_bucket: ${{ secrets.ARTIFACTS_BUCKET }}
       TF_VAR_snowflake_api_key: ${{ secrets.SNOWFLAKE_API_KEY }}
       # Entra OBO — REQUIRED by terraform (no defaults) since the gateway-only migration;
@@ -97,7 +103,7 @@ jobs:
           issue-body: >
             Trigger: ${{ github.event.action || github.event_name }} from
             ${{ github.event.client_payload.source || github.actor }}.
-            Image: ${{ github.event.client_payload.image_uri || secrets.AGENT_IMAGE_URI }}.
+            Image: ${{ github.event.client_payload.image_uri || vars.AGENT_IMAGE_URI || secrets.AGENT_IMAGE_URI }}.
             Comment "approved" to run `terraform apply`, or "denied" to cancel.
 
       - name: Configure AWS credentials (OIDC)
