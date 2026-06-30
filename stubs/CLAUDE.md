@@ -6,10 +6,10 @@ Guidance for working in this repo. Runtime architecture diagram in
 
 ## What this is
 
-Three FastAPI back-office stub services used as **AgentCore Gateway targets** for
-the order-triage demo. Each deploys as an arm64 Lambda Function URL (via
-[Mangum](https://pypi.org/project/mangum/), the ASGI→Lambda adapter) and runs locally
-under uvicorn.
+Three FastAPI back-office stub services used as **AgentCore Gateway targets** for the
+order-triage demo. Each runs locally under uvicorn; on deploy `snowflake_stub` is a Lambda
+Function URL (via [Mangum](https://pypi.org/project/mangum/), the ASGI→Lambda adapter), while
+`sap_stub`/`order_actions_stub` are native Lambda targets (the Gateway invokes them directly).
 
 | Package | Routes | Gateway target | Data source |
 |---|---|---|---|
@@ -33,9 +33,11 @@ Run a single test: `uv run pytest tests/test_snowflake_obo.py -q`.
 
 ## Auth model (important)
 
-- **Inbound to `sap`/`orders`:** the Lambda Function URL is `AuthType=AWS_IAM`; the
-  Gateway SigV4-signs each call with its execution role. There is **no app-layer key**
-  on these — don't add `X-API-Key` checks to them.
+- **Inbound to `sap`/`orders`:** native AgentCore Gateway **Lambda targets** — the Gateway
+  invokes each function directly (`lambda:InvokeFunction`) as its execution role. There is **no
+  Function URL, no SigV4, and no app-layer key**. The Lambda receives the tool args as the event
+  and the tool name in `client_context.custom['bedrockAgentCoreToolName']` — don't add HTTP or
+  `X-API-Key` handling to them.
 - **Inbound to `snowflake_stub`:** the Function URL stays `AuthType=NONE`; the Gateway reaches
   it with a per-user Entra **OBO** bearer (TOKEN_EXCHANGE). `POST /ask` is **user (OBO) only**:
   the forwarded `Authorization: Bearer <token>` is presented to Cortex Analyst and the SQL API
@@ -67,8 +69,10 @@ Run a single test: `uv run pytest tests/test_snowflake_obo.py -q`.
 - `boto3` is provided by the Lambda runtime and is never packaged into the zip;
   `boto3`/`jwt`/`cryptography` are imported lazily at their call sites so the modules
   stay unit-testable without those deps installed.
-- Each service has a thin `lambda_handler.py` (`Mangum(app)`) — the deploy entrypoint.
-  `app.py` holds the routes; keep all logic there.
+- `snowflake_stub`'s `lambda_handler.py` is `Mangum(app)` (its target is still a Function URL).
+  `sap`/`order_actions` are native Lambda targets, so their `lambda_handler.py` parses the
+  AgentCore tool event (`client_context.custom['bedrockAgentCoreToolName']` + the arg map) and
+  calls the `app.py` route function directly — no Mangum. `app.py` holds the routes/logic.
 - **After generating or editing a mermaid diagram, run the `mermaid-check` skill** and fix
   whatever it flags (parse errors, overlapping nodes/edges) before committing. The README's
   architecture diagram is mermaid.
@@ -85,7 +89,9 @@ Run a single test: `uv run pytest tests/test_snowflake_obo.py -q`.
 `build_lambdas.sh` builds the zips; `../.github/workflows/stubs-release.yml` uploads them plus
 each service's `openapi.json` to the artifacts S3 bucket on merge to `main`, then
 cascades a `stubs-published` dispatch to `../infra` (Terraform), which references
-the zips by `s3_key` and the specs via `aws_s3_object` data sources.
+the zips by `s3_key`. Only the `snowflake` target still consumes its `openapi.json` (via an
+`aws_s3_object` data source); the `sap`/`orders` Lambda targets carry an inline tool schema in
+the Gateway target, so their `openapi.json` is local API docs only.
 
 For a from-scratch deploy, run `../.github/workflows/stubs-release.yml` manually
 (`workflow_dispatch`) to publish all artifacts up front; `../infra`'s `make deploy` then

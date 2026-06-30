@@ -21,17 +21,15 @@ resource "aws_lambda_function" "sap" {
   source_code_hash = data.aws_s3_object.sap_zip.etag
 }
 
-resource "aws_lambda_function_url" "sap" {
+# Native AgentCore Gateway Lambda target (gateway.tf): the Gateway invokes this function
+# directly — no Function URL, no public surface. The Gateway's execution role is granted
+# lambda:InvokeFunction (iam.tf, identity side); this resource policy grants the AgentCore
+# service principal, scoped to this account's gateways, covering the principal AgentCore
+# presents at invoke time.
+resource "aws_lambda_permission" "sap_gateway" {
+  statement_id  = "AllowAgentCoreGatewayInvoke"
+  action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.sap.function_name
-  # Locked to IAM: only the AgentCore Gateway role may invoke (SigV4). No public access
-  # and no app-layer key — the Gateway target's gateway_iam_role credential signs the call.
-  authorization_type = "AWS_IAM"
-}
-
-resource "aws_lambda_permission" "sap_url" {
-  statement_id           = "AllowGatewayFunctionUrl"
-  action                 = "lambda:InvokeFunctionUrl"
-  function_name          = aws_lambda_function.sap.function_name
-  principal              = aws_iam_role.gateway.arn
-  function_url_auth_type = "AWS_IAM"
+  principal     = "bedrock-agentcore.amazonaws.com"
+  source_arn    = "arn:aws:bedrock-agentcore:${var.region}:${local.account_id}:gateway/*"
 }

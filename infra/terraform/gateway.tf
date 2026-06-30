@@ -1,17 +1,8 @@
-# AgentCore Gateway: exposes the stub services as MCP tools via OpenAPI targets,
-# with the outbound Identity credential and the Cedar policy engine attached.
-# The OpenAPI specs are published to the artifacts bucket by bedrock-demo-stubs and
-# read here via data sources (no sibling-folder files).
-
-data "aws_s3_object" "sap_openapi" {
-  bucket = var.artifacts_bucket
-  key    = "stubs/sap.openapi.json"
-}
-
-data "aws_s3_object" "orders_openapi" {
-  bucket = var.artifacts_bucket
-  key    = "stubs/order_actions.openapi.json"
-}
+# AgentCore Gateway: exposes the stub services as MCP tools, with the outbound Identity
+# credential and the Cedar policy engine attached. The sap/orders targets are native Lambda
+# (ARN) targets — the Gateway invokes the function directly via lambda:InvokeFunction, carrying
+# an inline tool schema (no Function URL, no SigV4). The snowflake target is OpenAPI (its spec +
+# OBO egress live in snowflake_lambda.tf).
 
 resource "aws_bedrockagentcore_gateway" "this" {
   name          = "${var.name_prefix}-gateway"
@@ -43,29 +34,39 @@ resource "aws_bedrockagentcore_gateway" "this" {
 resource "aws_bedrockagentcore_gateway_target" "sap" {
   gateway_identifier = aws_bedrockagentcore_gateway.this.gateway_id
   name               = "sap"
-  description        = "Dummy SAP credit API (OpenAPI target)"
+  description        = "Dummy SAP credit API (Lambda target)"
 
+  # Native Lambda target: the Gateway invokes the function directly (lambda:InvokeFunction),
+  # passing the tool args as the event and the tool name in client_context. The tool name MUST
+  # stay getCreditStatus so the MCP tool is `sap___getCreditStatus` (policy.tf Cedar action +
+  # the agent both pin it).
   target_configuration {
     mcp {
-      open_api_schema {
-        inline_payload {
-          payload = replace(
-            data.aws_s3_object.sap_openapi.body,
-            "https://REPLACE_WITH_LAMBDA_FUNCTION_URL",
-            trimsuffix(aws_lambda_function_url.sap.function_url, "/")
-          )
+      lambda {
+        lambda_arn = aws_lambda_function.sap.arn
+        tool_schema {
+          inline_payload {
+            name        = "getCreditStatus"
+            description = "Get the SAP credit status for a customer."
+            input_schema {
+              type = "object"
+              property {
+                name        = "customer_id"
+                type        = "string"
+                description = "Customer id, e.g. C-001."
+                required    = true
+              }
+            }
+          }
         }
       }
     }
   }
 
-  # Outbound Identity: the Gateway SigV4-signs the request to the Lambda Function URL
-  # (AuthType=AWS_IAM) with its execution role. `service = "lambda"` is the SigV4 service
-  # AWS documents for OpenAPI/MCP targets behind a Lambda Function URL.
+  # The Gateway invokes the Lambda as its own execution role (iam.tf grants
+  # lambda:InvokeFunction; the function's resource policy allows the AgentCore service principal).
   credential_provider_configuration {
-    gateway_iam_role {
-      service = "lambda"
-    }
+    gateway_iam_role {}
   }
 }
 
@@ -73,25 +74,40 @@ resource "aws_bedrockagentcore_gateway_target" "sap" {
 resource "aws_bedrockagentcore_gateway_target" "orders" {
   gateway_identifier = aws_bedrockagentcore_gateway.this.gateway_id
   name               = "orders"
-  description        = "Order actions (flagging) OpenAPI target"
+  description        = "Order actions (flagging) Lambda target"
 
+  # Native Lambda target. Tool name MUST stay flagOrder so the MCP tool is `orders___flagOrder`
+  # (policy.tf Cedar action + the agent both pin it).
   target_configuration {
     mcp {
-      open_api_schema {
-        inline_payload {
-          payload = replace(
-            data.aws_s3_object.orders_openapi.body,
-            "https://REPLACE_WITH_LAMBDA_FUNCTION_URL",
-            trimsuffix(aws_lambda_function_url.order_actions.function_url, "/")
-          )
+      lambda {
+        lambda_arn = aws_lambda_function.order_actions.arn
+        tool_schema {
+          inline_payload {
+            name        = "flagOrder"
+            description = "Flag an OPEN order for human review."
+            input_schema {
+              type = "object"
+              property {
+                name        = "order_id"
+                type        = "string"
+                description = "Order id to flag, e.g. O-1003."
+                required    = true
+              }
+              property {
+                name        = "reason"
+                type        = "string"
+                description = "Why the order is being flagged for review."
+                required    = true
+              }
+            }
+          }
         }
       }
     }
   }
 
   credential_provider_configuration {
-    gateway_iam_role {
-      service = "lambda"
-    }
+    gateway_iam_role {}
   }
 }

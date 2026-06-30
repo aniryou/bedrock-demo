@@ -26,7 +26,7 @@ This was over-permissive relative to the rest of the stack, which is tightly sco
 
 Replace the wildcard with four least-privileged statements (`iam.tf:aws_iam_role_policy.gateway`):
 
-**D1 — `lambda:InvokeFunctionUrl` on exactly the two SigV4 targets** (`aws_lambda_function.sap.arn`, `aws_lambda_function.order_actions.arn`). Dropped the unused `lambda:InvokeFunction`; the snowflake function is absent (its URL is `AuthType = NONE`).
+**D1 — `lambda:InvokeFunctionUrl` on exactly the two SigV4 targets** (`aws_lambda_function.sap.arn`, `aws_lambda_function.order_actions.arn`). Dropped the unused `lambda:InvokeFunction`; the snowflake function is absent (its URL is `AuthType = NONE`). _**Superseded by [ADR-0010](0010-sap-orders-native-lambda-targets.md):** sap/orders are now native Lambda targets, so the action is `lambda:InvokeFunction` (the SigV4 Function-URL egress was the source of a 403). Job #1 above changes accordingly._
 
 **D2 — the OBO token-mint actions, Resource = `*`.** `GetWorkloadAccessTokenForJWT` + `GetResourceOauth2Token` (OBO) + `GetResourceApiKey` (the count-guarded `X-API-Key` fallback); both egress configs granted statically so the role is correct whether or not OBO is enabled. **Resource stays `*`** because these token-mint actions authorize against several required resource types at once (`oauth2credentialprovider`/`apikeycredentialprovider`, the default `token-vault`, and the `workload-identity` the Gateway creates implicitly), not all exposed as Terraform attributes; pinning risks a silent `AccessDenied` that breaks impersonation. The win is the **action** restriction (three read/token actions, not all of `bedrock-agentcore:*`).
 

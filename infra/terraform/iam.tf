@@ -77,14 +77,14 @@ resource "aws_iam_role_policy" "gateway" {
     Version = "2012-10-17"
     Statement = [
       {
-        # SigV4 egress to the AWS_IAM-locked SAP + order-actions Function URLs (the
-        # gateway_iam_role credential in gateway.tf). The URLs' own resource policy pins the
-        # principal to this role (sap_lambda.tf / order_actions_lambda.tf); this is the
-        # identity-side half. The snowflake Function URL is AuthType=NONE — not IAM-invoked —
-        # so it is intentionally absent.
+        # Direct invoke of the SAP + order-actions Lambda targets (native AgentCore Lambda
+        # targets, gateway.tf): the Gateway calls lambda:InvokeFunction as this role. Each
+        # function's resource policy also allows the AgentCore service principal (sap_lambda.tf /
+        # order_actions_lambda.tf), so both invoke paths are covered. The snowflake target is an
+        # OBO Function URL (AuthType=NONE) — not IAM-invoked — so it is intentionally absent.
         Sid    = "InvokeLambdaTargets"
         Effect = "Allow"
-        Action = ["lambda:InvokeFunctionUrl"]
+        Action = ["lambda:InvokeFunction"]
         Resource = [
           aws_lambda_function.sap.arn,
           aws_lambda_function.order_actions.arn,

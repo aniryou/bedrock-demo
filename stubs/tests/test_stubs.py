@@ -5,12 +5,16 @@ Inbound auth for the deployed stubs is the Lambda Function URL's IAM authorizati
 no app-layer API key to exercise here. These tests cover the data + business-rule paths.
 """
 
+from types import SimpleNamespace
+
 import httpx
 from fastapi.testclient import TestClient
 
 from order_actions_stub import app as orders_module
 from order_actions_stub.app import app as orders_app
+from order_actions_stub.lambda_handler import handler as orders_handler
 from sap_stub.app import app as sap_app
+from sap_stub.lambda_handler import handler as sap_handler
 
 sap = TestClient(sap_app)
 orders = TestClient(orders_app)
@@ -54,4 +58,33 @@ def test_orders_flag_open_and_refuse_non_open(monkeypatch):
     ok = orders.post("/orders/O-1003/flag", json={"reason": "exposure"}).json()
     assert ok["flagged"] is True
     refused = orders.post("/orders/O-1005/flag", json={"reason": "x"}).json()  # SHIPPED
+    assert refused["flagged"] is False
+
+
+# --- Lambda-target entrypoints (deploy path) ---------------------------------
+# The deployed sap/orders are native AgentCore Gateway Lambda targets: invoked with the
+# tool args as the event and the MCP tool name in client_context.custom. Exercise the
+# lambda_handler dispatch directly (the FastAPI routes above cover the same business logic).
+
+
+def _lambda_ctx(tool_name: str):
+    return SimpleNamespace(
+        client_context=SimpleNamespace(custom={"bedrockAgentCoreToolName": tool_name})
+    )
+
+
+def test_sap_lambda_handler():
+    out = sap_handler({"customer_id": "C-002"}, _lambda_ctx("sap___getCreditStatus"))
+    assert out["customer_id"] == "C-002"
+    assert out["on_hold"] is True
+
+
+def test_orders_lambda_handler(monkeypatch):
+    monkeypatch.setenv("SNOWFLAKE_DATA_URL", "http://snowflake.test")
+    monkeypatch.setenv("SNOWFLAKE_API_KEY", "dev-sap-key")
+    monkeypatch.setattr(orders_module.httpx, "get", _fake_snowflake_get)
+
+    ok = orders_handler({"order_id": "O-1003", "reason": "exposure"}, _lambda_ctx("orders___flagOrder"))
+    assert ok["flagged"] is True
+    refused = orders_handler({"order_id": "O-1005", "reason": "x"}, _lambda_ctx("orders___flagOrder"))
     assert refused["flagged"] is False

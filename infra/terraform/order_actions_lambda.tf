@@ -27,16 +27,13 @@ resource "aws_lambda_function" "order_actions" {
   }
 }
 
-resource "aws_lambda_function_url" "order_actions" {
+# Native AgentCore Gateway Lambda target (gateway.tf): invoked directly, no Function URL.
+# Identity-side grant is on the Gateway role (iam.tf); this resource policy grants the
+# AgentCore service principal scoped to this account's gateways.
+resource "aws_lambda_permission" "order_actions_gateway" {
+  statement_id  = "AllowAgentCoreGatewayInvoke"
+  action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.order_actions.function_name
-  # Locked to IAM: only the AgentCore Gateway role may invoke (SigV4).
-  authorization_type = "AWS_IAM"
-}
-
-resource "aws_lambda_permission" "order_actions_url" {
-  statement_id           = "AllowGatewayFunctionUrl"
-  action                 = "lambda:InvokeFunctionUrl"
-  function_name          = aws_lambda_function.order_actions.function_name
-  principal              = aws_iam_role.gateway.arn
-  function_url_auth_type = "AWS_IAM"
+  principal     = "bedrock-agentcore.amazonaws.com"
+  source_arn    = "arn:aws:bedrock-agentcore:${var.region}:${local.account_id}:gateway/*"
 }
