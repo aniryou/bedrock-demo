@@ -178,14 +178,16 @@ throttle rates.
 
 ![CloudWatch GenAI Observability — the order_triage agent rollup: sessions, traces, total tokens, error and throttle rates](images/14%20-%20observability.png)
 
-Per endpoint, you get session and invocation counts and runtime latency over time.
+Per endpoint, you get a per-span breakdown — traces, errors, and latency for every tool call and
+model turn (here, `sap___getCreditStatus` and `snowflake___ask` next to the runtime-invoke and
+`chat` spans, all error-free).
 
-![Endpoint view — runtime sessions, invocations, and average latency for order_triage.DEFAULT](images/15%20-%20observability%20-%20endpoint.png)
+![Endpoint view (order_triage.DEFAULT) — per-span traces, errors, and latency across the agent's tool calls](images/15%20-%20observability%20-%20endpoint.png)
 
-Drill into **sessions** to see each conversation (the `webapp-*` IDs come from the chat client),
-with its traces, token spend, errors, and latency.
+Drill into **sessions** to see each conversation — its traces, token spend, errors, and latency.
+(The `webapp-*` IDs come from the chat client; `status-check-*` is the `make status` smoke test.)
 
-![Sessions list — three webapp sessions with traces, tokens, errors, and average trace latency](images/16%20-%20observability%20-%20session.png)
+![Sessions list — recent sessions (webapp + a smoke test) with traces, tokens, errors, and average trace latency](images/16%20-%20observability%20-%20session.png)
 
 And into a single **trace** to see the agent's actual reasoning step by step — the spans for each
 tool call and the agent's own thinking, captured as `gen_ai` events. This is the same trajectory
