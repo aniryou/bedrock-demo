@@ -209,7 +209,12 @@ usage.
 top actors and sessions by token spend, spend by downstream model, and the easy-to-miss cost of
 long-term memory processing.
 
-![order-triage-finops dashboard, part 1 — token volume, estimated cost, top actors and top sessions by tokens](images/19%20-%20observability%20-%20dashboard%20-%20finops%20-%201.png)
+The **Top actors** table reads as real names, not opaque ids. The runtime only ever stores the
+Entra directory id — a PII-free GUID — and a small Graph lookup turns that id into a display name
+when the dashboard renders. The same resolution runs on the governance audit table below. (See
+[ADR-0007](adr/0007-actor-resolution.md).)
+
+![order-triage-finops dashboard, part 1 — token volume, estimated cost, and the Top actors table with identities resolved to display names](images/19%20-%20observability%20-%20dashboard%20-%20finops%20-%201.png)
 
 ![order-triage-finops dashboard, part 2 — tokens by downstream model and the hidden cost of long-term memory processing](images/20%20-%20observability%20-%20dashboard%20-%20finops%20-%202.png)
 
@@ -218,7 +223,7 @@ model invocation, plus guardrail interventions, **Cedar authorization decisions 
 **OBO token-exchange success vs failure** — exactly the trail you'd want when asked "who saw what,
 and was it allowed?"
 
-![order-triage-governance dashboard, part 1 — the per-turn append-only model-invocation record (PII masked) and guardrail interventions](images/21%20-%20observability%20-%20dashboard%20-%20governance%20-%201.png)
+![order-triage-governance dashboard, part 1 — the per-turn append-only model-invocation record (PII masked, actor column resolved to display names) and guardrail interventions](images/21%20-%20observability%20-%20dashboard%20-%20governance%20-%201.png)
 
 ![order-triage-governance dashboard, part 2 — Cedar authorization decisions by tool and OBO token-exchange success vs failure](images/22%20-%20observability%20-%20dashboard%20-%20governance%20-%202.png)
 
